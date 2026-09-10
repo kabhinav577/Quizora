@@ -8,9 +8,18 @@ import { listQuestions } from './questions';
 import { calculateAttemptScore, AttemptScoreSummary } from '@/lib/quiz/scoring';
 
 
-// In-memory fallback store
-export const localAttempts: Attempt[] = [];
-export const localAttemptQuestions: AttemptQuestion[] = [];
+// In-memory fallback store attached to globalThis to persist across Next.js dev server/turbopack contexts
+declare global {
+  // eslint-disable-next-line no-var
+  var __localAttempts: Attempt[] | undefined;
+  // eslint-disable-next-line no-var
+  var __localAttemptQuestions: AttemptQuestion[] | undefined;
+}
+
+export const localAttempts: Attempt[] =
+  globalThis.__localAttempts ?? (globalThis.__localAttempts = []);
+export const localAttemptQuestions: AttemptQuestion[] =
+  globalThis.__localAttemptQuestions ?? (globalThis.__localAttemptQuestions = []);
 
 /**
  * Fisher-Yates array shuffle helper
@@ -133,7 +142,10 @@ export async function startAttempt(
       marks: test.marks_per_question ?? q.marks ?? 1.0,
       negative_marks: test.negative_marks ?? q.negative_marks ?? 0.0,
       time_seconds: test.question_time_seconds ?? q.default_time_seconds ?? null,
+      difficulty: q.difficulty || null,
+      topic_id: q.topic_id || null,
     };
+
 
 
     return {
@@ -239,7 +251,10 @@ export async function startPracticeSession(
       marks: q.marks || 1.0,
       negative_marks: q.negative_marks || 0.25,
       time_seconds: timerSeconds ?? q.default_time_seconds ?? null,
+      difficulty: q.difficulty || null,
+      topic_id: q.topic_id || null,
     };
+
 
     return {
       id: crypto.randomUUID(),
@@ -445,7 +460,7 @@ export async function saveAnswer(
   }
 
   const found = localAttemptQuestions.find(
-    (aq) => aq.attempt_id === attemptId && aq.question_id === questionId
+    (aq) => aq.attempt_id === attemptId && (aq.question_id === questionId || aq.id === questionId)
   );
   if (found) {
     found.selected_option = selectedOption;
@@ -494,15 +509,17 @@ export async function submitAttempt(
 
   // If final answers payload was supplied, update questions first
   if (finalAnswers && finalAnswers.length > 0) {
-    for (const ans of finalAnswers) {
-      await saveAnswer(
-        attemptId,
-        ans.question_id,
-        ans.selected_option,
-        ans.is_marked_for_review ?? false,
-        ans.time_spent_seconds ?? 0
-      );
-    }
+    await Promise.all(
+      finalAnswers.map((ans) =>
+        saveAnswer(
+          attemptId,
+          ans.question_id,
+          ans.selected_option,
+          ans.is_marked_for_review ?? false,
+          ans.time_spent_seconds ?? 0
+        )
+      )
+    );
   }
 
   // Reload fresh questions
@@ -518,11 +535,15 @@ export async function submitAttempt(
   const summary = calculateAttemptScore(scoringInput);
   const nowStr = new Date().toISOString();
 
-  // Update attempt records
+  // Update attempt records explicitly conforming to Attempt table columns
   const updatedAttempt: Attempt = {
-    ...refreshed,
+    id: refreshed.id,
+    user_id: refreshed.user_id,
+    test_id: refreshed.test_id,
     status: 'completed',
+    started_at: refreshed.started_at,
     submitted_at: nowStr,
+    total_questions: refreshed.total_questions,
     answered_questions: summary.answered_questions,
     correct_answers: summary.correct_answers,
     wrong_answers: summary.wrong_answers,
@@ -530,6 +551,7 @@ export async function submitAttempt(
     score: summary.score,
     accuracy: summary.accuracy,
     total_time_seconds: summary.total_time_seconds,
+    created_at: refreshed.created_at,
     updated_at: nowStr,
   };
 
@@ -548,16 +570,18 @@ export async function submitAttempt(
     const supabase = await createServerSupabaseClient();
     await supabase.from('attempts').update(updatedAttempt).eq('id', attemptId);
 
-    for (const uq of updatedQuestions) {
-      await supabase
-        .from('attempt_questions')
-        .update({
-          is_correct: uq.is_correct,
-          marks_awarded: uq.marks_awarded,
-          updated_at: nowStr,
-        })
-        .eq('id', uq.id);
-    }
+    await Promise.all(
+      updatedQuestions.map((uq) =>
+        supabase
+          .from('attempt_questions')
+          .update({
+            is_correct: uq.is_correct,
+            marks_awarded: uq.marks_awarded,
+            updated_at: nowStr,
+          })
+          .eq('id', uq.id)
+      )
+    );
   } catch {
     // fallback
   }
@@ -568,7 +592,9 @@ export async function submitAttempt(
   }
 
   for (const uq of updatedQuestions) {
-    const qIdx = localAttemptQuestions.findIndex((q) => q.id === uq.id);
+    const qIdx = localAttemptQuestions.findIndex(
+      (q) => q.id === uq.id || (q.attempt_id === attemptId && q.question_id === uq.question_id)
+    );
     if (qIdx !== -1) {
       localAttemptQuestions[qIdx] = uq;
     }
@@ -587,3 +613,85 @@ export async function submitAttempt(
     summary,
   };
 }
+
+/**
+ * Creates a targeted remediation practice session containing only the questions
+ * the user answered incorrectly or skipped in an earlier attempt.
+ */
+export async function startMistakesPractice(
+  userId: string,
+  originalAttemptId: string
+): Promise<AttemptWithDetails> {
+  const original = await getAttemptById(originalAttemptId);
+  if (!original) {
+    throw new Error('Original attempt not found');
+  }
+
+  const mistakeQuestions = original.questions.filter((q) => q.is_correct !== true);
+
+  if (mistakeQuestions.length === 0) {
+    throw new Error('Congratulations! You scored 100% on this test with no mistakes to practice.');
+  }
+
+  const attemptId = crypto.randomUUID();
+  const nowStr = new Date().toISOString();
+
+  const newAttemptQuestions: AttemptQuestion[] = mistakeQuestions.map((mq, idx) => ({
+    id: crypto.randomUUID(),
+    attempt_id: attemptId,
+    question_id: mq.question_id,
+    question_order: idx + 1,
+    question_snapshot: mq.question_snapshot,
+    selected_option: null,
+    is_answered: false,
+    is_marked_for_review: false,
+    is_correct: null,
+    question_started_at: null,
+    question_submitted_at: null,
+    time_spent_seconds: 0,
+    marks_awarded: 0,
+    created_at: nowStr,
+    updated_at: nowStr,
+  }));
+
+  const newAttempt: Attempt = {
+    id: attemptId,
+    user_id: userId,
+    test_id: null,
+    status: 'in_progress',
+    started_at: nowStr,
+    submitted_at: null,
+    total_questions: newAttemptQuestions.length,
+    answered_questions: 0,
+    correct_answers: 0,
+    wrong_answers: 0,
+    skipped_questions: 0,
+    score: 0,
+    accuracy: 0,
+    total_time_seconds: 0,
+    created_at: nowStr,
+    updated_at: nowStr,
+  };
+
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { error } = await supabase.from('attempts').insert(newAttempt);
+    if (!error) {
+      await supabase.from('attempt_questions').insert(newAttemptQuestions);
+    }
+  } catch {
+    // fallback
+  }
+
+  localAttempts.unshift(newAttempt);
+  localAttemptQuestions.push(...newAttemptQuestions);
+
+  return {
+    ...newAttempt,
+    test: null,
+    questions: newAttemptQuestions,
+    remaining_seconds: null,
+    is_expired: false,
+  };
+}
+

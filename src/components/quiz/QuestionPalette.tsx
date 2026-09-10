@@ -36,28 +36,28 @@ export function QuestionPalette({
         </h3>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-2 p-1.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
+          <div className="flex items-center gap-2 p-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
             <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">
               {answeredCount}
             </span>
             <span className="font-medium truncate">Answered</span>
           </div>
 
-          <div className="flex items-center gap-2 p-1.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300">
+          <div className="flex items-center gap-2 p-1.5 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300">
             <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-[10px]">
               {markedOnlyCount}
             </span>
             <span className="font-medium truncate">Review</span>
           </div>
 
-          <div className="flex items-center gap-2 p-1.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300">
+          <div className="flex items-center gap-2 p-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300">
             <span className="w-5 h-5 rounded-full bg-purple-600 ring-2 ring-emerald-400 text-white flex items-center justify-center font-bold text-[10px]">
               {answeredMarkedCount}
             </span>
             <span className="font-medium truncate">Ans + Review</span>
           </div>
 
-          <div className="flex items-center gap-2 p-1.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-2 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
             <span className="w-5 h-5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold text-[10px]">
               {unansweredCount}
             </span>
@@ -75,19 +75,27 @@ export function QuestionPalette({
             const isCurrent = idx === currentIndex;
             const { isAnswered, isMarkedForReview } = item;
 
-            let btnClasses = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-200';
+            // Strict border-2 on all buttons ensures zero layout shift when active state changes
+            let stateClasses = '';
 
             if (isAnswered && isMarkedForReview) {
-              btnClasses = 'bg-purple-600 text-white ring-2 ring-emerald-400 font-bold hover:bg-purple-700';
+              stateClasses = isCurrent
+                ? 'bg-purple-600 text-white border-emerald-300 ring-2 ring-emerald-400/50 ring-inset font-bold shadow-xs'
+                : 'bg-purple-600 text-white border-transparent ring-2 ring-emerald-400 ring-inset font-bold hover:bg-purple-700 shadow-xs';
             } else if (isMarkedForReview) {
-              btnClasses = 'bg-purple-600 text-white font-bold hover:bg-purple-700';
+              stateClasses = isCurrent
+                ? 'bg-purple-600 text-white border-white dark:border-purple-200 ring-2 ring-purple-400/40 ring-inset font-bold shadow-xs'
+                : 'bg-purple-600 text-white border-transparent font-bold hover:bg-purple-700 shadow-xs';
             } else if (isAnswered) {
-              btnClasses = 'bg-emerald-600 text-white font-bold hover:bg-emerald-700';
+              stateClasses = isCurrent
+                ? 'bg-emerald-600 text-white border-white dark:border-emerald-200 ring-2 ring-emerald-400/40 ring-inset font-bold shadow-xs'
+                : 'bg-emerald-600 text-white border-transparent font-bold hover:bg-emerald-700 shadow-xs';
+            } else {
+              // Unanswered
+              stateClasses = isCurrent
+                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold shadow-xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700';
             }
-
-            const currentRing = isCurrent
-              ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900 font-extrabold scale-105 shadow-sm'
-              : '';
 
             return (
               <button
@@ -96,13 +104,22 @@ export function QuestionPalette({
                 onClick={() => onSelectQuestion(idx)}
                 aria-label={`Jump to Question ${item.questionOrder}`}
                 aria-current={isCurrent ? 'true' : undefined}
-                className={`relative h-10 w-full rounded-md text-xs font-semibold flex items-center justify-center transition-all ${btnClasses} ${currentRing}`}
+                className={`relative h-10 w-full rounded-lg text-xs font-semibold flex items-center justify-center border-2 transition-colors ${stateClasses}`}
               >
-                {item.questionOrder}
+                <span>{item.questionOrder}</span>
                 {isAnswered && isMarkedForReview && (
                   <span
                     title="Answered & Marked"
                     className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-slate-900"
+                  />
+                )}
+                {isCurrent && (
+                  <span
+                    className={`absolute bottom-1 w-2.5 h-0.5 rounded-full ${
+                      isAnswered || isMarkedForReview
+                        ? 'bg-white/90'
+                        : 'bg-indigo-600 dark:bg-indigo-400'
+                    }`}
                   />
                 )}
               </button>

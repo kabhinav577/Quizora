@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 
 interface QuizTimerProps {
@@ -18,33 +18,38 @@ export function QuizTimer({
   mode = 'full',
   label,
 }: QuizTimerProps) {
-  const [prevInitial, setPrevInitial] = useState(initialSeconds);
   const [secondsLeft, setSecondsLeft] = useState<number>(Math.max(0, initialSeconds));
+  const onTimeUpRef = useRef(onTimeUp);
+  onTimeUpRef.current = onTimeUp;
 
-  if (initialSeconds !== prevInitial) {
-    setPrevInitial(initialSeconds);
-    setSecondsLeft(Math.max(0, initialSeconds));
-  }
+  // Track end timestamp for drift-free accuracy
+  const endTimeRef = useRef<number>(Date.now() + Math.max(0, initialSeconds) * 1000);
 
-
+  // If initialSeconds changed externally (e.g. attempt resumed or refreshed)
+  const prevInitialRef = useRef(initialSeconds);
+  useEffect(() => {
+    if (initialSeconds !== prevInitialRef.current) {
+      prevInitialRef.current = initialSeconds;
+      endTimeRef.current = Date.now() + Math.max(0, initialSeconds) * 1000;
+      setSecondsLeft(Math.max(0, initialSeconds));
+    }
+  }, [initialSeconds]);
 
   useEffect(() => {
-    if (isPaused || secondsLeft <= 0) return;
+    if (isPaused) return;
 
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onTimeUp();
-          return 0;
-        }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining <= 0) {
+        onTimeUpRef.current?.();
+      }
+    };
 
-        return prev - 1;
-      });
-    }, 1000);
-
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [isPaused, onTimeUp, secondsLeft]);
+  }, [isPaused]);
 
   // Format time display
   const formatTime = (totalSec: number) => {

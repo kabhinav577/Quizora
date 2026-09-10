@@ -172,24 +172,26 @@ export function QuestionEditor({
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Tab switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      {/* Top action header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            {initialData ? 'Edit Question' : 'Create New Question'}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            {initialData ? 'Edit Question' : 'Create New MCQ Question'}
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Build single-select questions with 4 or 5 options, formula text, diagrams, and media.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs">
+          <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 p-1 text-xs">
             <button
               type="button"
               onClick={() => setActiveTab('editor')}
               className={`rounded-md px-3 py-1.5 font-medium transition ${
-                activeTab === 'editor' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                activeTab === 'editor'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Editor Only
@@ -198,7 +200,9 @@ export function QuestionEditor({
               type="button"
               onClick={() => setActiveTab('split')}
               className={`hidden lg:block rounded-md px-3 py-1.5 font-medium transition ${
-                activeTab === 'split' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                activeTab === 'split'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Side-by-Side
@@ -207,7 +211,9 @@ export function QuestionEditor({
               type="button"
               onClick={() => setActiveTab('preview')}
               className={`rounded-md px-3 py-1.5 font-medium transition ${
-                activeTab === 'preview' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                activeTab === 'preview'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Eye className="inline h-3.5 w-3.5 mr-1" />
@@ -219,7 +225,7 @@ export function QuestionEditor({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="gap-1.5"
+            className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-xs"
           >
             <Save className="h-4 w-4" />
             {isSubmitting ? 'Saving...' : 'Save Question'}
@@ -228,8 +234,8 @@ export function QuestionEditor({
       </div>
 
       {errorMsg && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
           <div>
             <p className="font-semibold">Validation Error</p>
             <p>{errorMsg}</p>
@@ -246,15 +252,15 @@ export function QuestionEditor({
           } space-y-6`}
         >
           {/* 1. Classification & Hierarchy */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-blue-600" />
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               1. Exam Classification
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Exam *</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Exam *</label>
                 <select
                   value={selectedExamId}
                   onChange={(e) => {
@@ -262,7 +268,7 @@ export function QuestionEditor({
                     const subs = subjects.filter((s) => s.exam_id === e.target.value);
                     setSelectedSubjectId(subs[0]?.id || '');
                   }}
-                  className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {exams.map((ex) => (
                     <option key={ex.id} value={ex.id}>
@@ -273,7 +279,7 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Subject *</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Subject *</label>
                 <select
                   value={selectedSubjectId}
                   onChange={(e) => {
@@ -281,7 +287,7 @@ export function QuestionEditor({
                     const tops = topics.filter((t) => t.subject_id === e.target.value);
                     setSelectedTopicId(tops[0]?.id || '');
                   }}
-                  className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {availableSubjects.map((sub) => (
                     <option key={sub.id} value={sub.id}>
@@ -292,11 +298,11 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Topic (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Topic (Optional)</label>
                 <select
                   value={selectedTopicId}
                   onChange={(e) => setSelectedTopicId(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">-- No Topic --</option>
                   {availableTopics.map((top) => (
@@ -310,13 +316,13 @@ export function QuestionEditor({
           </div>
 
           {/* 2. Question Text & Diagram */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
               2. Question Content
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Question Text *
               </label>
               <Textarea
@@ -339,13 +345,13 @@ export function QuestionEditor({
           </div>
 
           {/* 3. Answer Options (A to D / E) */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-5">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-5">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
                   3. Answer Options ({options.length} Total)
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Select the radio button next to an option to mark it as the correct answer.
                 </p>
               </div>
@@ -356,7 +362,7 @@ export function QuestionEditor({
                   variant="outline"
                   size="sm"
                   onClick={handleAddOptionE}
-                  className="text-xs gap-1 border-dashed border-blue-400 text-blue-600 hover:bg-blue-50"
+                  className="text-xs gap-1 border-dashed border-indigo-400 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   + Add Option E
@@ -386,8 +392,8 @@ export function QuestionEditor({
                     key={idx}
                     className={`rounded-xl border p-4 transition-all ${
                       isCorrect
-                        ? 'border-emerald-400 bg-emerald-50/30 ring-1 ring-emerald-400'
-                        : 'border-slate-200 bg-slate-50/50'
+                        ? 'border-emerald-400 dark:border-emerald-500/70 bg-emerald-50/30 dark:bg-emerald-950/20 ring-1 ring-emerald-400'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2.5">
@@ -398,14 +404,14 @@ export function QuestionEditor({
                             name="correct_option_radio"
                             checked={isCorrect}
                             onChange={() => setCorrectOption(optNum)}
-                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer dark:bg-slate-800 dark:border-slate-700"
                           />
-                          <span className="text-xs font-bold text-slate-900 uppercase">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase">
                             {label}
                           </span>
                         </label>
                         {isCorrect && (
-                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-2 py-0.5 rounded-md flex items-center gap-1">
                             <Check className="h-3 w-3" />
                             Correct Answer
                           </span>
@@ -428,7 +434,7 @@ export function QuestionEditor({
                         value={option.text || ''}
                         onChange={(e) => handleOptionTextChange(idx, e.target.value)}
                         placeholder={`Option ${String.fromCharCode(65 + idx)} text (optional if image is provided)`}
-                        className="bg-white"
+                        className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
                       />
 
                       <ImageUploader
@@ -444,13 +450,13 @@ export function QuestionEditor({
           </div>
 
           {/* 4. Explanation & Scoring Configuration */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
               4. Explanation & Exam Parameters
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Detailed Explanation (Displayed during result review)
               </label>
               <Textarea
@@ -463,13 +469,13 @@ export function QuestionEditor({
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Difficulty
                 </label>
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-                  className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
@@ -478,7 +484,7 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Time (Seconds)
                 </label>
                 <Input
@@ -491,7 +497,7 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Positive Marks
                 </label>
                 <Input
@@ -504,7 +510,7 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Negative Marks
                 </label>
                 <Input
@@ -517,9 +523,9 @@ export function QuestionEditor({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Source Name
                 </label>
                 <Input
@@ -530,7 +536,7 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Exam Year
                 </label>
                 <Input
@@ -544,13 +550,13 @@ export function QuestionEditor({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
                 <select
                   value={status}
                   onChange={(e) =>
                     setStatus(e.target.value as 'draft' | 'published' | 'archived')
                   }
-                  className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                 >
                   <option value="published">Published</option>
                   <option value="draft">Draft</option>
@@ -568,18 +574,18 @@ export function QuestionEditor({
           }`}
         >
           <div className="sticky top-6 space-y-4">
-            <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xs">
+            <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-800 text-white px-4 py-2.5 rounded-xl shadow-xs border border-slate-800 dark:border-slate-700">
               <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Eye className="h-4 w-4 text-blue-400" />
+                <Eye className="h-4 w-4 text-indigo-400" />
                 Live Preview
               </span>
 
-              <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-lg text-xs">
+              <div className="flex items-center gap-1 bg-slate-800 dark:bg-slate-900 p-1 rounded-lg text-xs">
                 <button
                   type="button"
                   onClick={() => setPreviewMode('student')}
                   className={`px-2.5 py-1 rounded font-medium transition ${
-                    previewMode === 'student' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    previewMode === 'student' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   Student Mode
@@ -588,7 +594,7 @@ export function QuestionEditor({
                   type="button"
                   onClick={() => setPreviewMode('admin')}
                   className={`px-2.5 py-1 rounded font-medium transition ${
-                    previewMode === 'admin' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    previewMode === 'admin' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   Admin Review

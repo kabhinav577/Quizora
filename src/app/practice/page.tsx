@@ -43,6 +43,7 @@ export default function PracticeModePage() {
   const [isStarting, setIsStarting] = useState(false);
   const [activeAttempt, setActiveAttempt] = useState<AttemptWithDetails | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   // Load Exams on mount
   useEffect(() => {
@@ -54,7 +55,10 @@ export default function PracticeModePage() {
         if (!isMounted) return;
         setExams(examList);
         if (examList.length > 0) {
-          setSelectedExamId(examList[0].id);
+          const firstExamId = examList[0].id;
+          setSelectedExamId(firstExamId);
+          const subList = await listSubjectsAction(firstExamId);
+          if (isMounted) setSubjects(subList);
         }
       } catch (err) {
         console.error('Failed to load exams', err);
@@ -157,16 +161,35 @@ export default function PracticeModePage() {
     }>
   ) => {
     if (!activeAttempt) return;
+    setIsEvaluating(true);
     try {
       const res = await submitAttemptAction(activeAttempt.id, finalAnswers);
-      setActiveAttempt(null);
-      // Navigate to results page
+      router.prefetch(`/practice/results/${res.attempt.id}`);
       router.push(`/practice/results/${res.attempt.id}`);
     } catch (err) {
+      setIsEvaluating(false);
       console.error('Failed to submit practice attempt:', err);
       alert('Failed to submit practice session.');
     }
   };
+
+  // If in evaluating state, render smooth loader
+  if (isEvaluating) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6">
+        <div className="flex flex-col items-center max-w-sm text-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+            <Sparkles className="w-6 h-6 text-indigo-400 absolute inset-0 m-auto animate-pulse" />
+          </div>
+          <h3 className="text-xl font-bold tracking-tight text-slate-100">Generating Your Scorecard...</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Evaluating your answers, computing accuracy, and preparing detailed solutions.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // If in an active practice attempt, render QuizEngine
   if (activeAttempt) {

@@ -121,7 +121,7 @@ export function QuizQuestionView({
               'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900';
             if (isSelected) {
               cardBorder =
-                'border-primary ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10';
+                'border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/60 dark:bg-indigo-950/40 text-slate-900 dark:text-slate-100';
             }
 
             return (
@@ -144,8 +144,8 @@ export function QuizQuestionView({
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
                     isSelected
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   {letter}
@@ -250,7 +250,7 @@ export function QuizQuestionView({
             variant="default"
             size="sm"
             onClick={onNext}
-            className="flex items-center gap-1 bg-primary text-primary-foreground font-semibold"
+            className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs"
           >
             {isLast ? 'Save' : 'Save & Next'}
             {!isLast && <ChevronRight className="w-4 h-4" />}

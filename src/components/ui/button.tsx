@@ -8,13 +8,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-blue-600 text-white shadow hover:bg-blue-700 active:bg-blue-800',
-        destructive: 'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800',
-        outline: 'border border-slate-200 bg-white shadow-sm hover:bg-slate-50 hover:text-slate-900 text-slate-700',
-        secondary: 'bg-slate-100 text-slate-900 shadow-sm hover:bg-slate-200',
-        ghost: 'hover:bg-slate-100 hover:text-slate-900 text-slate-600',
-        link: 'text-blue-600 underline-offset-4 hover:underline',
-        success: 'bg-emerald-600 text-white shadow hover:bg-emerald-700',
+        default: 'bg-indigo-600 text-white shadow hover:bg-indigo-700 active:bg-indigo-800 dark:bg-indigo-600 dark:hover:bg-indigo-500',
+        destructive: 'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800 dark:bg-red-600 dark:hover:bg-red-500',
+        outline:
+          'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 text-slate-700 dark:text-slate-200',
+        secondary:
+          'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700',
+        ghost:
+          'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 text-slate-600 dark:text-slate-300',
+        link: 'text-indigo-600 dark:text-indigo-400 underline-offset-4 hover:underline',
+        success:
+          'bg-emerald-600 text-white shadow hover:bg-emerald-700 active:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500',
       },
       size: {
         default: 'h-10 px-4 py-2',

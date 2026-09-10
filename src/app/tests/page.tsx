@@ -104,7 +104,7 @@ export default async function TestsDirectoryPage({ searchParams }: TestsPageProp
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       {exam && (
-                        <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                           {exam.name}
                         </span>
                       )}
@@ -113,12 +113,12 @@ export default async function TestsDirectoryPage({ searchParams }: TestsPageProp
                       </Badge>
                     </div>
 
-                    <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors">
+                    <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {test.title}
                     </CardTitle>
 
                     {test.description && (
-                      <CardDescription className="line-clamp-2 text-xs mt-1 leading-relaxed">
+                      <CardDescription className="line-clamp-2 text-xs mt-1 leading-relaxed text-slate-500 dark:text-slate-400">
                         {test.description}
                       </CardDescription>
                     )}
@@ -126,21 +126,21 @@ export default async function TestsDirectoryPage({ searchParams }: TestsPageProp
 
                   <CardContent className="pt-0 space-y-4">
                     <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 dark:border-slate-800 text-xs">
-                      <div className="flex flex-col items-center justify-center p-1.5 rounded bg-slate-50 dark:bg-slate-900">
-                        <span className="text-slate-400 text-[10px]">Questions</span>
+                      <div className="flex flex-col items-center justify-center p-1.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50">
+                        <span className="text-slate-500 dark:text-slate-400 text-[10px]">Questions</span>
                         <span className="font-bold text-slate-900 dark:text-slate-100">
                           {test.total_questions}
                         </span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-1.5 rounded bg-slate-50 dark:bg-slate-900">
-                        <span className="text-slate-400 text-[10px]">Duration</span>
+                      <div className="flex flex-col items-center justify-center p-1.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50">
+                        <span className="text-slate-500 dark:text-slate-400 text-[10px]">Duration</span>
                         <span className="font-bold text-slate-900 dark:text-slate-100">
                           {durationMins ? `${durationMins}m` : 'Untimed'}
                         </span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-1.5 rounded bg-slate-50 dark:bg-slate-900">
-                        <span className="text-slate-400 text-[10px]">Marks</span>
-                        <span className="font-bold text-emerald-600">
+                      <div className="flex flex-col items-center justify-center p-1.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50">
+                        <span className="text-slate-500 dark:text-slate-400 text-[10px]">Marks</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
                           +{test.marks_per_question}
                         </span>
                       </div>
@@ -149,7 +149,7 @@ export default async function TestsDirectoryPage({ searchParams }: TestsPageProp
                     <Link href={`/tests/${test.slug}`} className="block">
                       <Button
                         variant="default"
-                        className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 group-hover:bg-primary/90"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
                       >
                         <span>Take Test</span>
                         <ArrowRight className="w-4 h-4" />

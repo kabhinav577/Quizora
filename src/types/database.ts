@@ -183,7 +183,11 @@ export interface QuestionSnapshot {
   marks: number;
   negative_marks: number;
   time_seconds?: number | null;
+  difficulty?: 'easy' | 'medium' | 'hard' | null;
+  topic_id?: string | null;
+  topic_name?: string | null;
 }
+
 
 export interface AttemptQuestion {
   id: string;

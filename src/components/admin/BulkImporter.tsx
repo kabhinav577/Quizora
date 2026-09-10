@@ -94,12 +94,12 @@ export function BulkImporter() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Bulk Question Importer
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Import hundreds of MCQs via CSV, Excel (.xlsx), or ZIP archives with diagrams.
           </p>
         </div>
@@ -108,31 +108,31 @@ export function BulkImporter() {
           variant="outline"
           size="sm"
           onClick={handleDownloadSample}
-          className="text-xs gap-1.5 shadow-xs"
+          className="text-xs gap-1.5 shadow-xs border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
         >
-          <Download className="h-4 w-4 text-blue-600" />
+          <Download className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
           Download Sample Template (CSV)
         </Button>
       </div>
 
       {/* Step 1: Upload Card if not parsed */}
       {!report && !completedSummary && (
-        <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-8 md:p-12 text-center hover:border-blue-400 transition-all shadow-xs">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-4 shadow-inner">
+        <div className="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 md:p-12 text-center hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-xs">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-4 shadow-inner">
             <UploadCloud className="h-8 w-8" />
           </div>
 
-          <h3 className="text-base font-bold text-slate-900">
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
             Upload Spreadsheet or ZIP Package
           </h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto mt-1.5 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1.5 leading-relaxed">
             Drag & drop your <strong>.csv</strong>, <strong>.xlsx</strong>, or <strong>.zip</strong> file.
-            For questions with diagrams or option images, include them in an <code className="text-blue-700 bg-blue-50 px-1 py-0.5 rounded">images/</code> folder within your ZIP.
+            For questions with diagrams or option images, include them in an <code className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded">images/</code> folder within your ZIP.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <label className="cursor-pointer">
-              <span className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">
+              <span className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
                 {isParsing ? 'Processing File...' : 'Choose File to Import'}
               </span>
               <input
@@ -149,7 +149,7 @@ export function BulkImporter() {
             </label>
           </div>
 
-          <div className="mt-8 flex items-center justify-center gap-6 text-xs text-slate-400 font-medium">
+          <div className="mt-8 flex items-center justify-center gap-6 text-xs text-slate-400 dark:text-slate-500 font-medium">
             <span className="flex items-center gap-1.5">
               <FileSpreadsheet className="h-4 w-4 text-emerald-500" /> Excel / CSV
             </span>
@@ -159,12 +159,12 @@ export function BulkImporter() {
             </span>
             <span>•</span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-blue-500" /> Auto-Validation
+              <CheckCircle2 className="h-4 w-4 text-indigo-500" /> Auto-Validation
             </span>
           </div>
 
           {parseError && (
-            <div className="mt-6 mx-auto max-w-md rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            <div className="mt-6 mx-auto max-w-md rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-700 dark:text-red-300">
               {parseError}
             </div>
           )}
@@ -176,58 +176,58 @@ export function BulkImporter() {
         <div className="space-y-6">
           {/* Summary Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs">
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Total Rows
               </p>
-              <p className="text-xl font-black text-slate-900 mt-0.5">{report.totalRows}</p>
+              <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">{report.totalRows}</p>
             </div>
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 shadow-xs">
-              <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Valid
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/30 p-3.5 shadow-xs">
+              <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Valid
               </p>
-              <p className="text-xl font-black text-emerald-900 mt-0.5">{report.validCount}</p>
+              <p className="text-xl font-black text-emerald-900 dark:text-emerald-200 mt-0.5">{report.validCount}</p>
             </div>
 
-            <div className="rounded-xl border border-red-200 bg-red-50/50 p-3.5 shadow-xs">
-              <p className="text-[11px] font-semibold text-red-700 uppercase tracking-wider flex items-center gap-1">
-                <XCircle className="h-3.5 w-3.5 text-red-600" /> Invalid
+            <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/30 p-3.5 shadow-xs">
+              <p className="text-[11px] font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider flex items-center gap-1">
+                <XCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" /> Invalid
               </p>
-              <p className="text-xl font-black text-red-900 mt-0.5">{report.errorCount}</p>
+              <p className="text-xl font-black text-red-900 dark:text-red-200 mt-0.5">{report.errorCount}</p>
             </div>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 shadow-xs">
-              <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Duplicates
+            <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/30 p-3.5 shadow-xs">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Duplicates
               </p>
-              <p className="text-xl font-black text-amber-900 mt-0.5">{report.duplicateCount}</p>
+              <p className="text-xl font-black text-amber-900 dark:text-amber-200 mt-0.5">{report.duplicateCount}</p>
             </div>
 
-            <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3.5 shadow-xs">
-              <p className="text-[11px] font-semibold text-purple-700 uppercase tracking-wider flex items-center gap-1">
-                <ImageIcon className="h-3.5 w-3.5 text-purple-600" /> Images
+            <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/30 p-3.5 shadow-xs">
+              <p className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1">
+                <ImageIcon className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" /> Images
               </p>
-              <p className="text-xl font-black text-purple-900 mt-0.5">
+              <p className="text-xl font-black text-indigo-900 dark:text-indigo-200 mt-0.5">
                 {report.imagesFoundCount}
               </p>
             </div>
           </div>
 
           {/* Action Bar */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 text-xs text-slate-700">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-xs text-slate-700 dark:text-slate-300">
               <label className="flex items-center gap-2 cursor-pointer font-medium">
                 <input
                   type="checkbox"
                   checked={skipDuplicates}
                   onChange={(e) => setSkipDuplicates(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
                 />
                 Skip potential duplicates ({report.duplicateCount})
               </label>
-              <span className="text-slate-300">|</span>
-              <span className="text-slate-500 font-mono">{file?.name}</span>
+              <span className="text-slate-300 dark:text-slate-700">|</span>
+              <span className="text-slate-500 dark:text-slate-400 font-mono">{file?.name}</span>
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -239,7 +239,7 @@ export function BulkImporter() {
                   setFile(null);
                 }}
                 disabled={isCommitting}
-                className="text-xs"
+                className="text-xs border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
               >
                 Cancel / Re-upload
               </Button>
@@ -248,7 +248,7 @@ export function BulkImporter() {
                 size="sm"
                 onClick={handleCommit}
                 disabled={isCommitting || report.validCount === 0}
-                className="text-xs gap-1.5 shadow-sm"
+                className="text-xs gap-1.5 shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
               >
                 {isCommitting ? (
                   <>
@@ -266,16 +266,16 @@ export function BulkImporter() {
           </div>
 
           {/* Tabbed Inspection View */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 bg-slate-50/70 p-2 gap-2 text-xs">
+            <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-2 gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveTab('valid')}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition ${
                   activeTab === 'valid'
-                    ? 'bg-white text-emerald-700 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Valid Rows ({report.validCount})
@@ -286,8 +286,8 @@ export function BulkImporter() {
                 onClick={() => setActiveTab('errors')}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition ${
                   activeTab === 'errors'
-                    ? 'bg-white text-red-700 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-900 text-red-700 dark:text-red-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Errors ({report.errorCount})
@@ -298,8 +298,8 @@ export function BulkImporter() {
                 onClick={() => setActiveTab('duplicates')}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition ${
                   activeTab === 'duplicates'
-                    ? 'bg-white text-amber-700 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Duplicates ({report.duplicateCount})
@@ -309,12 +309,12 @@ export function BulkImporter() {
             {/* Tab Contents */}
             <div className="p-4 max-h-[500px] overflow-y-auto">
               {activeTab === 'valid' && (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
                   {report.items.map((item) => (
                     <div key={item.rowIndex} className="py-3 flex items-start justify-between gap-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-slate-400 font-mono">
+                          <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 font-mono">
                             Row {item.rowIndex}
                           </span>
                           <Badge variant="outline" className="text-[10px]">
@@ -324,7 +324,7 @@ export function BulkImporter() {
                             {item.parsedInput.options.length} Options
                           </Badge>
                           {item.referencedImages.length > 0 && (
-                            <span className="text-[10px] text-purple-600 font-medium flex items-center gap-1">
+                            <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1">
                               <ImageIcon className="h-3 w-3" /> {item.referencedImages.length} Image(s)
                             </span>
                           )}
@@ -334,10 +334,10 @@ export function BulkImporter() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs font-semibold text-slate-900">
+                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                           {item.parsedInput.question_text}
                         </p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
                           Correct: Option {String.fromCharCode(64 + Number(item.parsedInput.correct_option))} • Marks: +{Number(item.parsedInput.marks)} (-{Number(item.parsedInput.negative_marks)})
                         </p>
                       </div>
@@ -347,38 +347,34 @@ export function BulkImporter() {
               )}
 
               {activeTab === 'errors' && (
-                <div className="divide-y divide-slate-100">
-                  {report.errors.length === 0 ? (
-                    <p className="text-xs text-slate-500 py-4 text-center">No validation errors detected!</p>
-                  ) : (
-                    report.errors.map((err, i) => (
-                      <div key={i} className="py-3 flex items-start gap-3">
-                        <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-red-800">
-                            Row {err.rowIndex} {err.field ? `(${err.field})` : ''}
-                          </p>
-                          <p className="text-xs text-red-600 mt-0.5">{err.message}</p>
-                        </div>
+                <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                  {report.errors.map((err, i) => (
+                    <div key={i} className="py-3 flex items-start gap-3">
+                      <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-red-800 dark:text-red-400">
+                          Row {err.rowIndex}: {err.field}
+                        </p>
+                        <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{err.message}</p>
                       </div>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </div>
               )}
 
               {activeTab === 'duplicates' && (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
                   {report.duplicates.length === 0 ? (
-                    <p className="text-xs text-slate-500 py-4 text-center">No potential duplicates detected.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 py-4 text-center">No potential duplicates detected.</p>
                   ) : (
                     report.duplicates.map((dup, i) => (
                       <div key={i} className="py-3 flex items-start gap-3">
                         <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-xs font-bold text-amber-800">
+                          <p className="text-xs font-bold text-amber-800 dark:text-amber-400">
                             Row {dup.rowIndex}: Duplicate of existing question
                           </p>
-                          <p className="text-xs text-slate-700 mt-0.5">{dup.questionText}</p>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{dup.questionText}</p>
                         </div>
                       </div>
                     ))
@@ -392,22 +388,22 @@ export function BulkImporter() {
 
       {/* Step 3: Success Confirmation Banner */}
       {completedSummary && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-8 text-center space-y-4 shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/30 p-8 text-center space-y-4 shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-7 w-7" />
           </div>
 
-          <h3 className="text-lg font-bold text-emerald-950">
+          <h3 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">
             Bulk Import Successful!
           </h3>
-          <p className="text-xs text-emerald-800 max-w-md mx-auto">
+          <p className="text-xs text-emerald-800 dark:text-emerald-300 max-w-md mx-auto">
             Successfully created <strong>{completedSummary.imported}</strong> new MCQs in the Question Bank.
             {completedSummary.skipped > 0 && ` (${completedSummary.skipped} duplicates skipped)`}
           </p>
 
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <Link href="/admin/questions">
-              <Button size="sm" className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+              <Button size="sm" className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
                 View Question Bank <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -419,7 +415,7 @@ export function BulkImporter() {
                 setReport(null);
                 setFile(null);
               }}
-              className="text-xs"
+              className="text-xs border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
             >
               Import Another File
             </Button>

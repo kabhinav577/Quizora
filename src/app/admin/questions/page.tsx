@@ -58,20 +58,20 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">Question Bank</h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Question Bank</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Search, filter, edit, and manage all MCQ questions across exams and topics.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/admin/imports">
-            <Button variant="outline" size="sm" className="text-xs">
+            <Button variant="outline" size="sm" className="text-xs border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200">
               Bulk Import
             </Button>
           </Link>
           <Link href="/admin/questions/new">
-            <Button size="sm" className="text-xs gap-1.5 shadow-sm">
+            <Button size="sm" className="text-xs gap-1.5 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
               <Plus className="h-4 w-4" />
               Create Question
             </Button>
@@ -80,11 +80,11 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
         <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search Input */}
           <div className="lg:col-span-2 relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
             <Input
               name="search"
               defaultValue={search}
@@ -98,7 +98,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
             <select
               name="examId"
               defaultValue={examId}
-              className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">All Exams</option>
               {exams.map((ex) => (
@@ -114,7 +114,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
             <select
               name="difficulty"
               defaultValue={difficulty}
-              className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">All Difficulties</option>
               <option value="easy">Easy</option>
@@ -128,7 +128,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
             <select
               name="status"
               defaultValue={status}
-              className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">All Statuses</option>
               <option value="published">Published</option>
@@ -137,25 +137,25 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
             </select>
           </div>
 
-          <div className="lg:col-span-5 flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
-            <div className="flex items-center gap-4 text-slate-600">
-              <label className="flex items-center gap-1.5 cursor-pointer">
+          <div className="lg:col-span-5 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
+              <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                 <input
                   type="checkbox"
                   name="hasImage"
                   value="true"
                   defaultChecked={params.hasImage === 'true'}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
                 />
                 Has Diagram
               </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                 <input
                   type="checkbox"
                   name="hasOptionImage"
                   value="true"
                   defaultChecked={params.hasOptionImage === 'true'}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
                 />
                 Has Option Images
               </label>
@@ -163,11 +163,11 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
 
             <div className="flex items-center gap-2">
               <Link href="/admin/questions">
-                <Button type="button" variant="ghost" size="sm" className="text-xs h-8">
+                <Button type="button" variant="ghost" size="sm" className="text-xs h-8 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">
                   Reset
                 </Button>
               </Link>
-              <Button type="submit" size="sm" className="text-xs h-8">
+              <Button type="submit" size="sm" className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-xs">
                 Apply Filters
               </Button>
             </div>
@@ -176,31 +176,31 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
       </div>
 
       {/* Question List Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/60">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             Total Questions Found: {total}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             Page {page} of {totalPages || 1}
           </span>
         </div>
 
         {questions.length === 0 ? (
           <div className="p-12 text-center">
-            <Layers className="mx-auto h-10 w-10 text-slate-300 mb-3" />
-            <p className="text-sm font-semibold text-slate-800">No questions found</p>
-            <p className="text-xs text-slate-500 mt-1">
+            <Layers className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600 mb-3" />
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No questions found</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Try adjusting your search criteria or create your first question.
             </p>
             <Link href="/admin/questions/new" className="inline-block mt-4">
-              <Button size="sm" className="text-xs">
+              <Button size="sm" className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
                 Create Question
               </Button>
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {questions.map((q) => {
               const hasDiag = Boolean(q.question_image_path);
               const hasOptImg = q.options.some((o) => Boolean(o.image_path));
@@ -209,7 +209,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
               return (
                 <div
                   key={q.id}
-                  className="p-5 hover:bg-slate-50/70 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-2 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -247,17 +247,17 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
                       )}
 
                       {q.source_name && (
-                        <span className="text-[11px] text-slate-400 font-medium">
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                           {q.source_name} {q.source_year ? `'${q.source_year.toString().slice(-2)}` : ''}
                         </span>
                       )}
                     </div>
 
-                    <p className="text-sm font-semibold text-slate-900 line-clamp-2">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-2">
                       {q.question_text}
                     </p>
 
-                    <div className="text-xs text-slate-500 flex items-center gap-3">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
                       <span>Correct: Option {String.fromCharCode(64 + q.correct_option)}</span>
                       <span>•</span>
                       <span>Marks: +{q.marks}</span>

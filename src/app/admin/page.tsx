@@ -33,8 +33,8 @@ export default async function AdminDashboardPage() {
       value: totalQuestions,
       description: `${publishedQuestions} published (${diagramQuestions} with diagrams)`,
       icon: BookOpen,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-950/60',
       href: '/admin/questions',
     },
     {
@@ -42,8 +42,8 @@ export default async function AdminDashboardPage() {
       value: exams.length,
       description: `${subjects.length} subjects categorized`,
       icon: Layers,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/60',
       href: '/admin/exams',
     },
     {
@@ -51,8 +51,8 @@ export default async function AdminDashboardPage() {
       value: 2,
       description: 'Practice & Full Test modes',
       icon: FileCheck,
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-50',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
       href: '/admin/tests',
     },
     {
@@ -60,8 +60,8 @@ export default async function AdminDashboardPage() {
       value: 0,
       description: 'Zero unresolved question flags',
       icon: Flag,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-50 dark:bg-amber-950/60',
       href: '/admin/reports',
     },
   ];
@@ -71,17 +71,17 @@ export default async function AdminDashboardPage() {
       {/* Welcome Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Admin Overview & Analytics
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Real-time examination statistics, question inventory, and content publishing workflow.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/admin/questions/new">
-            <Button size="sm" className="text-xs gap-1.5 shadow-sm">
+            <Button size="sm" className="text-xs gap-1.5 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
               <Plus className="h-4 w-4" />
               New Question
             </Button>
@@ -94,9 +94,9 @@ export default async function AdminDashboardPage() {
         {statCards.map((stat, idx) => {
           const Icon = stat.icon;
           return (
-            <Card key={idx} className="hover:border-slate-300 transition shadow-xs">
+            <Card key={idx} className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-300 dark:hover:border-indigo-800 transition shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <CardTitle className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   {stat.title}
                 </CardTitle>
                 <div className={`p-2 rounded-lg ${stat.bgColor}`}>
@@ -104,11 +104,11 @@ export default async function AdminDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-black text-slate-900">{stat.value}</div>
-                <p className="text-xs text-slate-500 mt-1">{stat.description}</p>
+                <div className="text-2xl font-black text-slate-900 dark:text-slate-100">{stat.value}</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{stat.description}</p>
                 <Link
                   href={stat.href}
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
                   Manage <ArrowUpRight className="h-3 w-3" />
                 </Link>
@@ -121,20 +121,20 @@ export default async function AdminDashboardPage() {
       {/* Quick Launch & Recent Questions Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Questions in Bank */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+        <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
               Recently Created Questions
             </h3>
             <Link
               href="/admin/questions"
-              className="text-xs font-semibold text-blue-600 hover:underline"
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
             >
               View All Question Bank →
             </Link>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {recentQuestions.map((q) => (
               <div key={q.id} className="py-3 flex items-start justify-between gap-4">
                 <div className="space-y-1">
@@ -146,18 +146,18 @@ export default async function AdminDashboardPage() {
                       {q.options.length} Options
                     </Badge>
                     {q.question_image_path && (
-                      <span className="text-[10px] text-purple-600 font-medium flex items-center gap-1">
+                      <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
                         <ImageIcon className="h-3 w-3" /> Diagram
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-slate-900 line-clamp-1">
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
                     {q.question_text}
                   </p>
                 </div>
 
                 <Link href={`/admin/questions/${q.id}/edit`}>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50">
                     Edit
                   </Button>
                 </Link>
@@ -167,11 +167,11 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Exam Coverage Summary */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
             Active Examinations
           </h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Targeted exam pipelines currently serving live practice questions:
           </p>
 
@@ -179,11 +179,11 @@ export default async function AdminDashboardPage() {
             {exams.map((ex) => (
               <div
                 key={ex.id}
-                className="p-3 rounded-lg border border-slate-100 bg-slate-50/50 flex items-center justify-between"
+                className="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex items-center justify-between"
               >
                 <div>
-                  <p className="text-xs font-bold text-slate-900">{ex.name}</p>
-                  <p className="text-[11px] text-slate-400">{ex.slug}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{ex.name}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">{ex.slug}</p>
                 </div>
                 <Badge variant="success" className="text-[10px]">
                   Live
@@ -194,7 +194,7 @@ export default async function AdminDashboardPage() {
 
           <div className="pt-2">
             <Link href="/admin/exams">
-              <Button variant="outline" size="sm" className="w-full text-xs">
+              <Button variant="outline" size="sm" className="w-full text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200">
                 Configure New Syllabus
               </Button>
             </Link>

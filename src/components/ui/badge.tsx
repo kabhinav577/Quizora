@@ -7,13 +7,13 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-blue-100 text-blue-800 hover:bg-blue-200',
-        secondary: 'border-transparent bg-slate-100 text-slate-800 hover:bg-slate-200',
-        destructive: 'border-transparent bg-red-100 text-red-800',
-        outline: 'border-slate-300 text-slate-700',
-        success: 'border-transparent bg-emerald-100 text-emerald-800',
-        warning: 'border-transparent bg-amber-100 text-amber-800',
-        purple: 'border-transparent bg-purple-100 text-purple-800',
+        default: 'border-transparent bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+        secondary: 'border-transparent bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+        destructive: 'border-transparent bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800',
+        outline: 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-transparent',
+        success: 'border-transparent bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        warning: 'border-transparent bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+        purple: 'border-transparent bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
       },
     },
     defaultVariants: {

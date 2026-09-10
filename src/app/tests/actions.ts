@@ -1,22 +1,27 @@
 'use server';
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import {
   startAttempt,
   saveAnswer,
   submitAttempt,
   startPracticeSession,
   getAttemptById,
+  startMistakesPractice,
 } from '@/services/attempts';
 import { getTestBySlug } from '@/services/tests';
 import { listExams } from '@/services/exams';
 import { listSubjects } from '@/services/subjects';
 import { listTopics } from '@/services/topics';
-
+import { toggleBookmark, getUserBookmarks } from '@/services/bookmarks';
+import { submitQuestionReport, SubmitReportInput } from '@/services/reports';
 
 const DEFAULT_DEV_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 async function getEffectiveUserId(): Promise<string> {
+  if (!isSupabaseConfigured()) {
+    return DEFAULT_DEV_USER_ID;
+  }
   try {
     const supabase = await createServerSupabaseClient();
     const { data } = await supabase.auth.getUser();
@@ -88,4 +93,25 @@ export async function listSubjectsAction(examId?: string) {
 export async function listTopicsAction(subjectId?: string) {
   return await listTopics(subjectId);
 }
+
+export async function toggleBookmarkAction(questionId: string) {
+  const userId = await getEffectiveUserId();
+  return await toggleBookmark(userId, questionId);
+}
+
+export async function getUserBookmarksAction() {
+  const userId = await getEffectiveUserId();
+  return await getUserBookmarks(userId);
+}
+
+export async function submitQuestionReportAction(input: SubmitReportInput) {
+  const userId = await getEffectiveUserId();
+  return await submitQuestionReport(userId, input);
+}
+
+export async function startMistakesPracticeAction(originalAttemptId: string) {
+  const userId = await getEffectiveUserId();
+  return await startMistakesPractice(userId, originalAttemptId);
+}
+
 

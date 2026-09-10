@@ -223,12 +223,12 @@ export function TestBuilder({
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             {initialData ? 'Edit Test' : 'Test Builder'}
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Configure examination mock tests and rapid practice sets with custom timer and scoring rules.
           </p>
         </div>
@@ -239,13 +239,18 @@ export function TestBuilder({
             variant="outline"
             size="sm"
             onClick={() => setPreviewModalOpen(true)}
-            className="text-xs gap-1"
+            className="text-xs gap-1 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
           >
             <Eye className="h-3.5 w-3.5" />
             Preview Test
           </Button>
 
-          <Button type="submit" size="sm" disabled={isSubmitting} className="text-xs gap-1.5 shadow-sm">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isSubmitting}
+            className="text-xs gap-1.5 shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+          >
             <Save className="h-4 w-4" />
             {isSubmitting ? 'Saving Test...' : 'Save & Publish Test'}
           </Button>
@@ -253,8 +258,8 @@ export function TestBuilder({
       </div>
 
       {errorMessage && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">Cannot save test</p>
             <p>{errorMessage}</p>
@@ -267,18 +272,18 @@ export function TestBuilder({
         {/* Left Column: Test Configuration (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Card 1: Core Details */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <Layers className="h-4 w-4 text-blue-600" />
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               1. Test Metadata
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Target Exam *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Exam *</label>
               <select
                 value={examId}
                 onChange={(e) => setExamId(e.target.value)}
-                className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {exams.map((ex) => (
                   <option key={ex.id} value={ex.id}>
@@ -289,7 +294,7 @@ export function TestBuilder({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Test Title *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Test Title *</label>
               <Input
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
@@ -299,7 +304,7 @@ export function TestBuilder({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">URL Slug *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">URL Slug *</label>
               <Input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
@@ -309,7 +314,7 @@ export function TestBuilder({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Description / Instructions
               </label>
               <Textarea
@@ -322,13 +327,13 @@ export function TestBuilder({
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Test Type</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Test Type</label>
                 <select
                   value={testType}
                   onChange={(e) =>
                     setTestType(e.target.value as 'practice' | 'mock_test')
                   }
-                  className="w-full h-9 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-800"
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="practice">Practice Mode</option>
                   <option value="mock_test">Full Mock Test</option>
@@ -336,13 +341,13 @@ export function TestBuilder({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
                 <select
                   value={status}
                   onChange={(e) =>
                     setStatus(e.target.value as 'draft' | 'published' | 'archived')
                   }
-                  className="w-full h-9 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-800 font-semibold"
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
@@ -353,21 +358,21 @@ export function TestBuilder({
           </div>
 
           {/* Card 2: Timers & Scoring */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-emerald-600" />
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               2. Timing & Scoring Engine
             </h3>
 
             {/* Full test timer */}
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 space-y-2">
-              <label className="flex items-center justify-between text-xs font-semibold text-slate-800 cursor-pointer">
+            <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3 space-y-2">
+              <label className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
                 <span>Full Test Timer (Countdown)</span>
                 <input
                   type="checkbox"
                   checked={hasDuration}
                   onChange={(e) => setHasDuration(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
                 />
               </label>
 
@@ -381,22 +386,22 @@ export function TestBuilder({
                     onChange={(e) =>
                       setDurationMinutes(e.target.value === '' ? '' : Number(e.target.value))
                     }
-                    className="h-8 text-xs bg-white w-24"
+                    className="h-8 text-xs bg-white dark:bg-slate-900 w-24"
                   />
-                  <span className="text-xs text-slate-500">Minutes</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Minutes</span>
                 </div>
               )}
             </div>
 
             {/* Per-question timer */}
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 space-y-2">
-              <label className="flex items-center justify-between text-xs font-semibold text-slate-800 cursor-pointer">
+            <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3 space-y-2">
+              <label className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
                 <span>Per-Question Rapid Timer</span>
                 <input
                   type="checkbox"
                   checked={hasQuestionTimer}
                   onChange={(e) => setHasQuestionTimer(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
                 />
               </label>
 
@@ -411,16 +416,16 @@ export function TestBuilder({
                       setQuestionTimeSeconds(e.target.value === '' ? '' : Number(e.target.value))
                     }
                     placeholder="e.g. 30"
-                    className="h-8 text-xs bg-white w-24"
+                    className="h-8 text-xs bg-white dark:bg-slate-900 w-24"
                   />
-                  <span className="text-xs text-slate-500">Seconds / Question</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Seconds / Question</span>
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Marks per Question
                 </label>
                 <Input
@@ -434,7 +439,7 @@ export function TestBuilder({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Negative Marks
                 </label>
                 <Input
@@ -450,49 +455,49 @@ export function TestBuilder({
           </div>
 
           {/* Card 3: Shuffle & Visibility Settings */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <Shuffle className="h-4 w-4 text-purple-600" />
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <Shuffle className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               3. Delivery & Randomization
             </h3>
 
-            <label className="flex items-center justify-between text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <label className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
               <span>Shuffle question order for each attempt</span>
               <input
                 type="checkbox"
                 checked={shuffleQuestions}
                 onChange={(e) => setShuffleQuestions(e.target.checked)}
-                className="rounded text-blue-600"
+                className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
               />
             </label>
 
-            <label className="flex items-center justify-between text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <label className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
               <span>Shuffle answer options order</span>
               <input
                 type="checkbox"
                 checked={shuffleOptions}
                 onChange={(e) => setShuffleOptions(e.target.checked)}
-                className="rounded text-blue-600"
+                className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
               />
             </label>
 
-            <label className="flex items-center justify-between text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <label className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
               <span>Show result immediately after submit</span>
               <input
                 type="checkbox"
                 checked={showResultImmediately}
                 onChange={(e) => setShowResultImmediately(e.target.checked)}
-                className="rounded text-blue-600"
+                className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
               />
             </label>
 
-            <label className="flex items-center justify-between text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <label className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition">
               <span>Show question explanations on review</span>
               <input
                 type="checkbox"
                 checked={showExplanations}
                 onChange={(e) => setShowExplanations(e.target.checked)}
-                className="rounded text-blue-600"
+                className="rounded text-indigo-600 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700"
               />
             </label>
           </div>
@@ -501,13 +506,13 @@ export function TestBuilder({
         {/* Right Column: Question Selection & Ordering (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Selected Questions Pool */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
                   Selected Questions ({selectedQuestionIds.length})
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Total Marks: {selectedQuestionIds.length * marksPerQuestion}
                 </p>
               </div>
@@ -528,21 +533,21 @@ export function TestBuilder({
                 No questions selected yet. Check questions from the catalog below to add them to this test.
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-[380px] overflow-y-auto">
                 {selectedQuestions.map((q, idx) => (
                   <div
                     key={q.id}
-                    className="p-3.5 hover:bg-slate-50 flex items-center justify-between gap-3 transition"
+                    className="p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-between gap-3 transition"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 text-xs font-bold">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold">
                         {idx + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-slate-900 truncate">
+                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                           {q.question_text}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
                           <span>{q.options.length} Options</span>
                           <span>•</span>
                           <span>{q.difficulty}</span>
@@ -556,7 +561,7 @@ export function TestBuilder({
                         type="button"
                         onClick={() => moveUp(idx)}
                         disabled={idx === 0}
-                        className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30"
+                        className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30"
                         title="Move Up"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
@@ -565,7 +570,7 @@ export function TestBuilder({
                         type="button"
                         onClick={() => moveDown(idx)}
                         disabled={idx === selectedQuestions.length - 1}
-                        className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30"
+                        className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30"
                         title="Move Down"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
@@ -575,7 +580,7 @@ export function TestBuilder({
                         onClick={() => {
                           setPreviewQuestion(q);
                         }}
-                        className="p-1 rounded text-slate-400 hover:text-blue-600"
+                        className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
                         title="Preview Question"
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -583,7 +588,7 @@ export function TestBuilder({
                       <button
                         type="button"
                         onClick={() => removeQuestion(q.id)}
-                        className="p-1 rounded text-slate-400 hover:text-red-600"
+                        className="p-1 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                         title="Remove"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -596,12 +601,12 @@ export function TestBuilder({
           </div>
 
           {/* Question Catalog & Filter Picker */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden space-y-3 p-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden space-y-3 p-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
                 Add Questions from Question Bank
               </h3>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
                 {filteredAvailableQuestions.length} available
               </span>
             </div>
@@ -614,7 +619,7 @@ export function TestBuilder({
                   value={questionSearch}
                   onChange={(e) => setQuestionSearch(e.target.value)}
                   placeholder="Search questions by text..."
-                  className="pl-8 h-8 text-xs"
+                  className="pl-8 h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -622,7 +627,7 @@ export function TestBuilder({
                 <select
                   value={subjectFilter}
                   onChange={(e) => setSubjectFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-800"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">All Subjects</option>
                   {subjects
@@ -639,7 +644,7 @@ export function TestBuilder({
                 <select
                   value={topicFilter}
                   onChange={(e) => setTopicFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-800"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">All Topics</option>
                   {topics.map((t) => (
@@ -654,7 +659,7 @@ export function TestBuilder({
                 <select
                   value={difficultyFilter}
                   onChange={(e) => setDifficultyFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-800"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">All Difficulties</option>
                   <option value="easy">Easy</option>
@@ -665,7 +670,7 @@ export function TestBuilder({
             </div>
 
             {/* Available questions scrollable list */}
-            <div className="divide-y divide-slate-100 max-h-[360px] overflow-y-auto border rounded-lg border-slate-200">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-[360px] overflow-y-auto border rounded-lg border-slate-200 dark:border-slate-800">
               {filteredAvailableQuestions.map((q) => {
                 const isSelected = selectedQuestionIds.includes(q.id);
                 return (
@@ -673,21 +678,23 @@ export function TestBuilder({
                     key={q.id}
                     onClick={() => toggleSelectQuestion(q.id)}
                     className={`p-3 flex items-start gap-3 cursor-pointer transition ${
-                      isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50'
+                      isSelected
+                        ? 'bg-indigo-50/60 dark:bg-indigo-950/40'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => {}} // handled by parent onClick
-                      className="mt-1 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer dark:bg-slate-800 dark:border-slate-700"
                     />
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-900 leading-snug">
+                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-snug">
                         {q.question_text}
                       </p>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
                         <Badge variant="outline" className="text-[9px] py-0 px-1.5">
                           {q.difficulty}
                         </Badge>
@@ -711,10 +718,10 @@ export function TestBuilder({
         maxWidth="2xl"
       >
         <div className="space-y-4 text-xs">
-          <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 space-y-2">
-            <h4 className="text-sm font-bold text-slate-900">{title || 'Untitled Test'}</h4>
-            <p className="text-slate-600">{description || 'No description provided.'}</p>
-            <div className="flex flex-wrap gap-3 pt-2 text-slate-500 font-medium">
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-200 dark:border-slate-700 space-y-2">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">{title || 'Untitled Test'}</h4>
+            <p className="text-slate-600 dark:text-slate-400">{description || 'No description provided.'}</p>
+            <div className="flex flex-wrap gap-3 pt-2 text-slate-500 dark:text-slate-400 font-medium">
               <span>Type: {testType}</span>
               <span>•</span>
               <span>
@@ -732,8 +739,8 @@ export function TestBuilder({
           </div>
 
           <div>
-            <h5 className="font-bold text-slate-900 mb-2">Question Order Sequence:</h5>
-            <ol className="list-decimal list-inside space-y-1 text-slate-700">
+            <h5 className="font-bold text-slate-900 dark:text-slate-100 mb-2">Question Order Sequence:</h5>
+            <ol className="list-decimal list-inside space-y-1 text-slate-700 dark:text-slate-300">
               {selectedQuestions.map((q) => (
                 <li key={q.id} className="truncate">
                   {q.question_text}

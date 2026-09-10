@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { AttemptWithDetails } from '@/types/quiz';
 import { QuizTimer } from './QuizTimer';
 
@@ -16,7 +16,6 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react';
-
 
 interface QuizEngineProps {
   attempt: AttemptWithDetails;
@@ -71,6 +70,9 @@ export function QuizEngine({
     }
     return map;
   });
+
+  const answersStateRef = useRef(answersState);
+  answersStateRef.current = answersState;
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -131,22 +133,20 @@ export function QuizEngine({
   const handleSelectOption = useCallback(
     (optionNum: number) => {
       if (!currentQId) return;
-      setAnswersState((prev) => {
-        const cur = prev[currentQId] || {
-          selectedOption: null,
-          isMarkedForReview: false,
-          timeSpentSeconds: 0,
-        };
-        const updated = {
-          ...cur,
-          selectedOption: optionNum,
-        };
-        triggerAutoSave(currentQId, optionNum, cur.isMarkedForReview, cur.timeSpentSeconds);
-        return {
-          ...prev,
-          [currentQId]: updated,
-        };
-      });
+      const cur = answersStateRef.current[currentQId] || {
+        selectedOption: null,
+        isMarkedForReview: false,
+        timeSpentSeconds: 0,
+      };
+      const updated = {
+        ...cur,
+        selectedOption: optionNum,
+      };
+      setAnswersState((prev) => ({
+        ...prev,
+        [currentQId]: updated,
+      }));
+      triggerAutoSave(currentQId, optionNum, cur.isMarkedForReview, cur.timeSpentSeconds);
     },
     [currentQId, triggerAutoSave]
   );
@@ -154,44 +154,40 @@ export function QuizEngine({
   // Clear Option handler
   const handleClearOption = useCallback(() => {
     if (!currentQId) return;
-    setAnswersState((prev) => {
-      const cur = prev[currentQId] || {
-        selectedOption: null,
-        isMarkedForReview: false,
-        timeSpentSeconds: 0,
-      };
-      const updated = {
-        ...cur,
-        selectedOption: null,
-      };
-      triggerAutoSave(currentQId, null, cur.isMarkedForReview, cur.timeSpentSeconds);
-      return {
-        ...prev,
-        [currentQId]: updated,
-      };
-    });
+    const cur = answersStateRef.current[currentQId] || {
+      selectedOption: null,
+      isMarkedForReview: false,
+      timeSpentSeconds: 0,
+    };
+    const updated = {
+      ...cur,
+      selectedOption: null,
+    };
+    setAnswersState((prev) => ({
+      ...prev,
+      [currentQId]: updated,
+    }));
+    triggerAutoSave(currentQId, null, cur.isMarkedForReview, cur.timeSpentSeconds);
   }, [currentQId, triggerAutoSave]);
 
   // Toggle Mark for review
   const handleToggleMarkForReview = useCallback(() => {
     if (!currentQId) return;
-    setAnswersState((prev) => {
-      const cur = prev[currentQId] || {
-        selectedOption: null,
-        isMarkedForReview: false,
-        timeSpentSeconds: 0,
-      };
-      const updatedMark = !cur.isMarkedForReview;
-      const updated = {
-        ...cur,
-        isMarkedForReview: updatedMark,
-      };
-      triggerAutoSave(currentQId, cur.selectedOption, updatedMark, cur.timeSpentSeconds);
-      return {
-        ...prev,
-        [currentQId]: updated,
-      };
-    });
+    const cur = answersStateRef.current[currentQId] || {
+      selectedOption: null,
+      isMarkedForReview: false,
+      timeSpentSeconds: 0,
+    };
+    const updatedMark = !cur.isMarkedForReview;
+    const updated = {
+      ...cur,
+      isMarkedForReview: updatedMark,
+    };
+    setAnswersState((prev) => ({
+      ...prev,
+      [currentQId]: updated,
+    }));
+    triggerAutoSave(currentQId, cur.selectedOption, updatedMark, cur.timeSpentSeconds);
   }, [currentQId, triggerAutoSave]);
 
   // Navigation handlers
@@ -288,12 +284,12 @@ export function QuizEngine({
   };
 
   // Final Submission
-  const handleConfirmSubmit = async () => {
+  const handleConfirmSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
       const answersPayload = questions.map((q) => {
         const qid = q.question_id || q.id;
-        const cur = answersState[qid] || {
+        const cur = answersStateRef.current[qid] || {
           selectedOption: null,
           isMarkedForReview: false,
           timeSpentSeconds: 0,
@@ -311,7 +307,7 @@ export function QuizEngine({
       console.error('Submission failed:', err);
       setIsSubmitting(false);
     }
-  };
+  }, [questions, onSubmitAttempt]);
 
   // Prepare Palette Items
   const paletteItems: QuestionStatusItem[] = questions.map((q, idx) => {
