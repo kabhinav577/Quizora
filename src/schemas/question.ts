@@ -72,34 +72,82 @@ export const QuestionFormSchema = z
 export type QuestionFormInput = z.input<typeof QuestionFormSchema>;
 export type QuestionFormOutput = z.output<typeof QuestionFormSchema>;
 
+const coerceText = z.preprocess((val) => {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim();
+  return s.length > 0 ? s : null;
+}, z.string().nullable().optional());
+
+const coerceRequiredText = (fieldName: string) =>
+  z.preprocess((val) => {
+    if (val === null || val === undefined) return '';
+    return String(val).trim();
+  }, z.string().min(1, { message: `${fieldName} is required.` }));
+
+const coerceDifficulty = z.preprocess((val) => {
+  if (!val) return 'medium';
+  const s = String(val).trim().toLowerCase();
+  if (['easy', 'basic', 'beginner', 'simple', 'low', '1'].includes(s)) return 'easy';
+  if (['hard', 'expert', 'advanced', 'difficult', 'high', 'complex', '3'].includes(s)) return 'hard';
+  return 'medium';
+}, z.enum(['easy', 'medium', 'hard']).default('medium'));
+
+const coercePositiveNumber = (defaultVal: number) =>
+  z.preprocess((val) => {
+    if (val === null || val === undefined || val === '') return defaultVal;
+    const n = Number(val);
+    return isNaN(n) ? val : n;
+  }, z.number().positive().default(defaultVal));
+
+const coerceNonNegativeNumber = (defaultVal: number) =>
+  z.preprocess((val) => {
+    if (val === null || val === undefined || val === '') return defaultVal;
+    const n = Number(val);
+    return isNaN(n) ? val : n;
+  }, z.number().min(0).default(defaultVal));
+
+const coerceOptionalPositiveInt = () =>
+  z.preprocess((val) => {
+    if (val === null || val === undefined || val === '') return null;
+    const n = Number(val);
+    return isNaN(n) ? val : Math.round(n);
+  }, z.number().int().positive().nullable().optional());
+
+const coerceOptionalYear = () =>
+  z.preprocess((val) => {
+    if (val === null || val === undefined || val === '') return null;
+    const n = Number(val);
+    return isNaN(n) ? val : Math.round(n);
+  }, z.number().int().min(1950).max(2100).nullable().optional());
+
 /**
  * Bulk Import Row Schema (for CSV / Excel)
  */
 export const BulkImportRowSchema = z
   .object({
-    question_text: z.string().trim().min(1, { message: 'Question text is required.' }),
-    question_image: z.string().trim().nullable().optional(),
-    option_a: z.string().trim().nullable().optional(),
-    option_a_image: z.string().trim().nullable().optional(),
-    option_b: z.string().trim().nullable().optional(),
-    option_b_image: z.string().trim().nullable().optional(),
-    option_c: z.string().trim().nullable().optional(),
-    option_c_image: z.string().trim().nullable().optional(),
-    option_d: z.string().trim().nullable().optional(),
-    option_d_image: z.string().trim().nullable().optional(),
-    option_e: z.string().trim().nullable().optional(),
-    option_e_image: z.string().trim().nullable().optional(),
+    question_text: coerceRequiredText('Question text'),
+    question_image: coerceText,
+    option_a: coerceText,
+    option_a_image: coerceText,
+    option_b: coerceText,
+    option_b_image: coerceText,
+    option_c: coerceText,
+    option_c_image: coerceText,
+    option_d: coerceText,
+    option_d_image: coerceText,
+    option_e: coerceText,
+    option_e_image: coerceText,
     correct_option: z.coerce.number().int().min(1).max(5),
-    explanation: z.string().trim().nullable().optional(),
-    exam: z.string().trim().min(1, { message: 'Exam name or slug is required.' }),
-    subject: z.string().trim().min(1, { message: 'Subject name or slug is required.' }),
-    topic: z.string().trim().nullable().optional(),
-    difficulty: z.enum(['easy', 'medium', 'hard']).default('medium'),
-    default_time_seconds: z.coerce.number().int().positive().nullable().optional(),
-    marks: z.coerce.number().positive().default(1.0),
-    negative_marks: z.coerce.number().min(0).default(0.0),
-    source_name: z.string().trim().nullable().optional(),
-    source_year: z.coerce.number().int().min(1950).max(2100).nullable().optional(),
+    explanation: coerceText,
+    exam: coerceRequiredText('Exam name or slug'),
+    subject: coerceRequiredText('Subject name or slug'),
+    topic: coerceText,
+    difficulty: coerceDifficulty,
+    default_time_seconds: coerceOptionalPositiveInt(),
+    marks: coercePositiveNumber(1.0),
+    negative_marks: coerceNonNegativeNumber(0.0),
+    source_name: coerceText,
+    source_year: coerceOptionalYear(),
   })
   .superRefine((data, ctx) => {
     // Validate Option A

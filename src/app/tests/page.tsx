@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-
+import { StudentHeader } from '@/components/layout/StudentHeader';
 
 interface TestsPageProps {
   searchParams: Promise<{ examId?: string }>;
@@ -30,8 +30,10 @@ export default async function TestsDirectoryPage({ searchParams }: TestsPageProp
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <StudentHeader />
+      <div className="flex-1 py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -162,6 +164,7 @@ export default async function TestsDirectoryPage({ searchParams }: TestsPageProp
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

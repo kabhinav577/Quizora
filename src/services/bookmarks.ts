@@ -2,7 +2,6 @@ import { Bookmark } from '@/types/database';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 declare global {
-  // eslint-disable-next-line no-var
   var __localBookmarks: Bookmark[] | undefined;
 }
 

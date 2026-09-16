@@ -10,9 +10,7 @@ import { calculateAttemptScore, AttemptScoreSummary } from '@/lib/quiz/scoring';
 
 // In-memory fallback store attached to globalThis to persist across Next.js dev server/turbopack contexts
 declare global {
-  // eslint-disable-next-line no-var
   var __localAttempts: Attempt[] | undefined;
-  // eslint-disable-next-line no-var
   var __localAttemptQuestions: AttemptQuestion[] | undefined;
 }
 

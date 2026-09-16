@@ -14,6 +14,7 @@ import { getExams } from '@/services/exams';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ModernPagination } from '@/components/admin/ModernPagination';
 
 interface PageProps {
   searchParams: Promise<{
@@ -24,6 +25,7 @@ interface PageProps {
     hasImage?: string;
     hasOptionImage?: string;
     page?: string;
+    pageSize?: string;
   }>;
 }
 
@@ -35,7 +37,10 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
   const status = params.status || '';
   const hasImage = params.hasImage === 'true' ? true : params.hasImage === 'false' ? false : undefined;
   const hasOptionImage = params.hasOptionImage === 'true' ? true : params.hasOptionImage === 'false' ? false : undefined;
-  const page = Number(params.page || '1');
+  const page = Math.max(1, Number(params.page || '1'));
+  const pageSize = [10, 15, 25, 50, 100].includes(Number(params.pageSize))
+    ? Number(params.pageSize)
+    : 15;
 
   const [exams, questionData] = await Promise.all([
     getExams(false),
@@ -47,7 +52,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
       hasImage,
       hasOptionImage,
       page,
-      pageSize: 15,
+      pageSize,
     }),
   ]);
 
@@ -137,6 +142,8 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
             </select>
           </div>
 
+          <input type="hidden" name="pageSize" value={pageSize} />
+
           <div className="lg:col-span-5 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
             <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
               <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
@@ -178,11 +185,19 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
       {/* Question List Table */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/60">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            Total Questions Found: {total}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Page {page} of {totalPages || 1}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Questions Found: <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{total}</span>
+            </span>
+            {total > 0 && (
+              <span className="hidden sm:inline-block text-xs text-slate-500 dark:text-slate-400 font-medium">
+                (Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)})
+              </span>
+            )}
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            Page <strong className="font-semibold text-slate-800 dark:text-slate-200">{page}</strong> of{' '}
+            <strong className="font-semibold text-slate-800 dark:text-slate-200">{totalPages || 1}</strong>
           </span>
         </div>
 
@@ -324,6 +339,16 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
             })}
           </div>
         )}
+
+        {/* Modern Pagination Controls */}
+        <ModernPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 15, 25, 50, 100]}
+          itemLabel="questions"
+        />
       </div>
     </div>
   );

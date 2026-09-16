@@ -49,7 +49,8 @@ export function BulkImporter() {
       }
 
       const imageFileNames = Array.from(imagesMap.keys());
-      const validationReport = await validateImportAction(rows, imageFileNames);
+      const plainRows = rows.map((r) => ({ ...r }));
+      const validationReport = await validateImportAction(plainRows, imageFileNames);
       setReport(validationReport);
       if (validationReport.validCount > 0) {
         setActiveTab('valid');
@@ -67,7 +68,14 @@ export function BulkImporter() {
     if (!report || report.validCount === 0) return;
     setIsCommitting(true);
     try {
-      const res = await commitImportAction(report.items, skipDuplicates);
+      const plainItems = report.items.map((it) => ({
+        ...it,
+        parsedInput: {
+          ...it.parsedInput,
+          options: it.parsedInput.options.map((opt) => ({ ...opt })),
+        },
+      }));
+      const res = await commitImportAction(plainItems, skipDuplicates);
       setCompletedSummary({
         imported: res.importedCount,
         skipped: res.skippedCount,

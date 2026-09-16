@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   BookOpen,
@@ -9,7 +10,6 @@ import {
   GraduationCap,
   UploadCloud,
   FileCheck,
-  Flag,
   LayoutDashboard,
   ExternalLink,
   ShieldCheck,
@@ -29,16 +29,22 @@ export function AdminSidebar() {
   return (
     <aside className="w-full md:w-64 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 md:min-h-screen flex flex-col transition-colors">
       {/* Brand Header */}
-      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <Link href="/admin" className="flex items-center gap-3 group">
-          <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-sm shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
+      <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <Link href="/admin" className="flex items-center gap-3 group select-none">
+          <Image
+            src="/logo.svg"
+            alt="Quizora Logo"
+            width={36}
+            height={36}
+            priority
+            unoptimized
+            className="w-9 h-9 shrink-0 object-contain"
+          />
           <div>
-            <span className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">
+            <span className="font-brand font-black tracking-tight text-xl bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent block leading-none">
               Quizora
             </span>
-            <span className="block text-[10px] uppercase font-bold tracking-wider text-indigo-600 dark:text-indigo-400">
+            <span className="block text-[10px] uppercase font-bold tracking-wider text-indigo-400 mt-1">
               Admin Console
             </span>
           </div>

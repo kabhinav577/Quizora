@@ -6,45 +6,20 @@ import { Exam } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { StudentHeader } from '@/components/layout/StudentHeader';
 import {
-  ShieldCheck,
   Sparkles,
   ArrowRight,
+  LayoutDashboard,
 } from 'lucide-react';
-
 
 export default async function HomePage() {
   const exams: Exam[] = await listExams();
   const { tests } = await listTests({ status: 'published', pageSize: 6 });
 
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
-      {/* Top Navbar */}
-      <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 flex items-center justify-between">
-        <div className="flex items-center gap-2 font-black text-xl text-primary tracking-tight">
-          <ShieldCheck className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-          <span>QUIZORA</span>
-        </div>
-
-        <nav className="flex items-center gap-3">
-          <Link href="/tests">
-            <Button variant="ghost" size="sm" className="font-medium text-slate-700 dark:text-slate-300">
-              Mock Tests
-            </Button>
-          </Link>
-          <Link href="/practice">
-            <Button variant="ghost" size="sm" className="font-medium text-slate-700 dark:text-slate-300">
-              Practice Mode
-            </Button>
-          </Link>
-          <Link href="/admin">
-            <Button variant="outline" size="sm">
-              Admin Portal
-            </Button>
-          </Link>
-        </nav>
-      </header>
+      <StudentHeader />
 
       {/* Hero Section */}
       <main className="flex-1">
@@ -67,12 +42,23 @@ export default async function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/tests">
+            <Link href="/dashboard">
               <Button
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
               >
-                <span>Take a Mock Test</span>
+                <LayoutDashboard className="w-5 h-5" />
+                <span>Student Dashboard</span>
+              </Button>
+            </Link>
+
+            <Link href="/tests">
+              <Button
+                variant="outline"
+                size="lg"
+                className="font-semibold px-8 py-6 text-base flex items-center gap-2"
+              >
+                <span>Mock Tests</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>

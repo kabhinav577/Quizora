@@ -66,7 +66,8 @@ export async function parseImportFile(
       const workbook = XLSX.read(fileBuffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json<RawImportRow>(sheet, { defval: '' });
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const rows = sanitizeRows(rawRows);
 
       return { rows, imagesMap };
     } catch (err: unknown) {
@@ -90,7 +91,8 @@ export async function parseImportFile(
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json<RawImportRow>(sheet, { defval: '' });
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const rows = sanitizeRows(rawRows);
 
       return { rows, imagesMap };
     } catch (err: unknown) {
@@ -101,6 +103,30 @@ export async function parseImportFile(
       };
     }
   }
+}
+
+/**
+ * Strips non-enumerable properties (such as __rowNum__ added by XLSX)
+ * and UTF-8 BOM characters from keys, guaranteeing 100% plain objects
+ * that can be safely serialized over Next.js Server Actions.
+ */
+function sanitizeRows(rawRows: Record<string, unknown>[]): RawImportRow[] {
+  return rawRows.map((row) => {
+    const plain: Record<string, string | number> = {};
+    for (const [key, value] of Object.entries(row)) {
+      const cleanKey = key.replace(/^\uFEFF/, '').trim();
+      if (!cleanKey) continue;
+
+      if (value === null || value === undefined) {
+        plain[cleanKey] = '';
+      } else if (typeof value === 'object') {
+        plain[cleanKey] = String(value);
+      } else {
+        plain[cleanKey] = value as string | number;
+      }
+    }
+    return plain as RawImportRow;
+  });
 }
 
 /**

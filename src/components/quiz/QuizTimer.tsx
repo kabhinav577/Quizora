@@ -20,15 +20,16 @@ export function QuizTimer({
 }: QuizTimerProps) {
   const [secondsLeft, setSecondsLeft] = useState<number>(Math.max(0, initialSeconds));
   const onTimeUpRef = useRef(onTimeUp);
-  onTimeUpRef.current = onTimeUp;
+  const endTimeRef = useRef<number | null>(null);
 
-  // Track end timestamp for drift-free accuracy
-  const endTimeRef = useRef<number>(Date.now() + Math.max(0, initialSeconds) * 1000);
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp;
+  }, [onTimeUp]);
 
-  // If initialSeconds changed externally (e.g. attempt resumed or refreshed)
+  // If initialSeconds changed externally or not yet initialized
   const prevInitialRef = useRef(initialSeconds);
   useEffect(() => {
-    if (initialSeconds !== prevInitialRef.current) {
+    if (endTimeRef.current === null || initialSeconds !== prevInitialRef.current) {
       prevInitialRef.current = initialSeconds;
       endTimeRef.current = Date.now() + Math.max(0, initialSeconds) * 1000;
       setSecondsLeft(Math.max(0, initialSeconds));
@@ -39,7 +40,8 @@ export function QuizTimer({
     if (isPaused) return;
 
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+      const end = endTimeRef.current ?? Date.now() + Math.max(0, initialSeconds) * 1000;
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
       setSecondsLeft(remaining);
       if (remaining <= 0) {
         onTimeUpRef.current?.();
@@ -49,7 +51,7 @@ export function QuizTimer({
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isPaused, initialSeconds]);
 
   // Format time display
   const formatTime = (totalSec: number) => {

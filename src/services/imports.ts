@@ -83,6 +83,36 @@ export function normalizeCorrectOption(val: unknown): number {
 }
 
 /**
+ * Normalizes varied difficulty labels to 'easy', 'medium', or 'hard'
+ */
+export function normalizeDifficulty(val: unknown): 'easy' | 'medium' | 'hard' {
+  if (!val) return 'medium';
+  const s = String(val).trim().toLowerCase();
+  if (['easy', 'basic', 'beginner', 'simple', 'low', '1'].includes(s)) return 'easy';
+  if (['hard', 'expert', 'advanced', 'difficult', 'high', 'complex', '3'].includes(s)) return 'hard';
+  return 'medium';
+}
+
+function sanitizeRows(rawRows: Record<string, unknown>[]): RawImportRow[] {
+  return rawRows.map((row) => {
+    const plain: Record<string, string | number> = {};
+    for (const [key, value] of Object.entries(row)) {
+      const cleanKey = key.replace(/^\uFEFF/, '').trim();
+      if (!cleanKey) continue;
+
+      if (value === null || value === undefined) {
+        plain[cleanKey] = '';
+      } else if (typeof value === 'object') {
+        plain[cleanKey] = String(value);
+      } else {
+        plain[cleanKey] = value as string | number;
+      }
+    }
+    return plain as RawImportRow;
+  });
+}
+
+/**
  * Parses CSV, XLSX, or ZIP files into raw rows and in-memory image map
  */
 export async function parseImportFile(
@@ -147,7 +177,8 @@ export async function parseImportFile(
       const workbook = XLSX.read(fileBuffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json<RawImportRow>(sheet, { defval: '' });
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const rows = sanitizeRows(rawRows);
 
       return { rows, imagesMap };
     } catch (err: unknown) {
@@ -171,7 +202,8 @@ export async function parseImportFile(
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json<RawImportRow>(sheet, { defval: '' });
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const rows = sanitizeRows(rawRows);
 
       return { rows, imagesMap };
     } catch (err: unknown) {
@@ -204,25 +236,34 @@ export async function validateImportData(
   const items: ValidatedImportItem[] = [];
 
   // Helper map for normalizing strings
-  const normalize = (s?: string) => s?.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+  const normalize = (s?: string | null) => s?.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || '';
 
   rows.forEach((raw, idx) => {
     const rowIndex = idx + 2; // Excel row numbering (row 1 is header)
 
+    const toStringOrNull = (val: unknown): string | null => {
+      if (val === null || val === undefined) return null;
+      const s = String(val).trim();
+      return s.length > 0 ? s : null;
+    };
+
     // Basic required check
-    if (!raw.question_text || raw.question_text.trim() === '') {
+    const questionText = toStringOrNull(raw.question_text);
+    if (!questionText) {
       errors.push({ rowIndex, field: 'question_text', message: 'Question text is empty.' });
       return;
     }
 
     // Match Exam
-    const examMatch = exams.find(
-      (e) =>
-        normalize(e.name) === normalize(raw.exam) ||
-        normalize(e.slug) === normalize(raw.exam)
-    ) || exams[0];
+    const rawExamStr = toStringOrNull(raw.exam);
+    const examMatch =
+      exams.find(
+        (e) =>
+          normalize(e.name) === normalize(rawExamStr) ||
+          normalize(e.slug) === normalize(rawExamStr)
+      ) || (rawExamStr ? null : exams[0]);
 
-    if (!raw.exam || !examMatch) {
+    if (!examMatch) {
       errors.push({
         rowIndex,
         field: 'exam',
@@ -232,12 +273,20 @@ export async function validateImportData(
     }
 
     // Match Subject
+    const rawSubStr = toStringOrNull(raw.subject);
     const availableSubs = subjects.filter((s) => s.exam_id === examMatch.id);
-    const subjectMatch = availableSubs.find(
-      (s) =>
-        normalize(s.name) === normalize(raw.subject) ||
-        normalize(s.slug) === normalize(raw.subject)
-    ) || availableSubs[0];
+    const subjectMatch =
+      availableSubs.find(
+        (s) =>
+          normalize(s.name) === normalize(rawSubStr) ||
+          normalize(s.slug) === normalize(rawSubStr)
+      ) ||
+      subjects.find(
+        (s) =>
+          normalize(s.name) === normalize(rawSubStr) ||
+          normalize(s.slug) === normalize(rawSubStr)
+      ) ||
+      (rawSubStr ? null : availableSubs[0]);
 
     if (!subjectMatch) {
       errors.push({
@@ -249,12 +298,13 @@ export async function validateImportData(
     }
 
     // Match Topic (Optional)
+    const rawTopicStr = toStringOrNull(raw.topic);
     const availableTopics = topics.filter((t) => t.subject_id === subjectMatch.id);
-    const topicMatch = raw.topic
+    const topicMatch = rawTopicStr
       ? availableTopics.find(
           (t) =>
-            normalize(t.name) === normalize(raw.topic) ||
-            normalize(t.slug) === normalize(raw.topic)
+            normalize(t.name) === normalize(rawTopicStr) ||
+            normalize(t.slug) === normalize(rawTopicStr)
         )
       : null;
 
@@ -263,29 +313,41 @@ export async function validateImportData(
 
     // Build row object for Zod validation
     const rowForZod = {
-      question_text: raw.question_text,
-      question_image: raw.question_image || null,
-      option_a: raw.option_a || null,
-      option_a_image: raw.option_a_image || null,
-      option_b: raw.option_b || null,
-      option_b_image: raw.option_b_image || null,
-      option_c: raw.option_c || null,
-      option_c_image: raw.option_c_image || null,
-      option_d: raw.option_d || null,
-      option_d_image: raw.option_d_image || null,
-      option_e: raw.option_e || null,
-      option_e_image: raw.option_e_image || null,
+      question_text: questionText,
+      question_image: toStringOrNull(raw.question_image),
+      option_a: toStringOrNull(raw.option_a),
+      option_a_image: toStringOrNull(raw.option_a_image),
+      option_b: toStringOrNull(raw.option_b),
+      option_b_image: toStringOrNull(raw.option_b_image),
+      option_c: toStringOrNull(raw.option_c),
+      option_c_image: toStringOrNull(raw.option_c_image),
+      option_d: toStringOrNull(raw.option_d),
+      option_d_image: toStringOrNull(raw.option_d_image),
+      option_e: toStringOrNull(raw.option_e),
+      option_e_image: toStringOrNull(raw.option_e_image),
       correct_option: correctOpt,
-      explanation: raw.explanation || null,
+      explanation: toStringOrNull(raw.explanation),
       exam: examMatch.name,
       subject: subjectMatch.name,
-      topic: topicMatch?.name || null,
-      difficulty: (raw.difficulty?.toLowerCase() as 'easy' | 'medium' | 'hard') || 'medium',
-      default_time_seconds: raw.default_time_seconds ? Number(raw.default_time_seconds) : null,
-      marks: raw.marks ? Number(raw.marks) : 1.0,
-      negative_marks: raw.negative_marks ? Number(raw.negative_marks) : 0.25,
-      source_name: raw.source_name || null,
-      source_year: raw.source_year ? Number(raw.source_year) : null,
+      topic: topicMatch?.name || rawTopicStr,
+      difficulty: normalizeDifficulty(raw.difficulty),
+      default_time_seconds:
+        raw.default_time_seconds && !isNaN(Number(raw.default_time_seconds))
+          ? Number(raw.default_time_seconds)
+          : null,
+      marks:
+        raw.marks && !isNaN(Number(raw.marks)) && Number(raw.marks) > 0
+          ? Number(raw.marks)
+          : 1.0,
+      negative_marks:
+        raw.negative_marks && !isNaN(Number(raw.negative_marks))
+          ? Number(raw.negative_marks)
+          : 0.0,
+      source_name: toStringOrNull(raw.source_name),
+      source_year:
+        raw.source_year && !isNaN(Number(raw.source_year))
+          ? Number(raw.source_year)
+          : null,
     };
 
     const zodResult = BulkImportRowSchema.safeParse(rowForZod);

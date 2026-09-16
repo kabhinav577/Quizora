@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Exam, Subject, Topic } from '@/types/database';
 import type { AttemptWithDetails } from '@/types/quiz';
 import {
@@ -11,8 +11,10 @@ import {
   startPracticeSessionAction,
   saveAnswerAction,
   submitAttemptAction,
+  getAttemptDetailsAction,
 } from '@/app/tests/actions';
 import { QuizEngine } from '@/components/quiz/QuizEngine';
+import { StudentHeader } from '@/components/layout/StudentHeader';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,10 +26,13 @@ import {
   Clock,
   HelpCircle,
   Play,
+  Loader2,
 } from 'lucide-react';
 
-export default function PracticeModePage() {
+function PracticeModeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const attemptIdFromUrl = searchParams.get('attemptId');
 
   const [exams, setExams] = useState<Exam[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -44,6 +49,27 @@ export default function PracticeModePage() {
   const [activeAttempt, setActiveAttempt] = useState<AttemptWithDetails | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
+
+  // Load attempt from URL if query param attemptId is provided
+  useEffect(() => {
+    let isMounted = true;
+    if (!attemptIdFromUrl) return;
+
+    async function loadAttemptFromUrl() {
+      try {
+        const attempt = await getAttemptDetailsAction(attemptIdFromUrl!);
+        if (isMounted && attempt) {
+          setActiveAttempt(attempt);
+        }
+      } catch (err) {
+        console.error('Failed to load attempt from URL', err);
+      }
+    }
+    loadAttemptFromUrl();
+    return () => {
+      isMounted = false;
+    };
+  }, [attemptIdFromUrl]);
 
   // Load Exams on mount
   useEffect(() => {
@@ -204,9 +230,11 @@ export default function PracticeModePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <div className="text-center space-y-3">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <StudentHeader />
+      <div className="flex-1 py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto space-y-8">
+          <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-200 dark:border-indigo-800">
             <Sparkles className="w-3.5 h-3.5" />
             Adaptive Daily Practice
@@ -384,5 +412,20 @@ export default function PracticeModePage() {
         </Card>
       </div>
     </div>
+    </div>
+  );
+}
+
+export default function PracticeModePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        </div>
+      }
+    >
+      <PracticeModeContent />
+    </Suspense>
   );
 }

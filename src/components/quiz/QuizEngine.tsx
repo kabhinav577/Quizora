@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import type { AttemptWithDetails } from '@/types/quiz';
 import { QuizTimer } from './QuizTimer';
 
@@ -72,7 +73,9 @@ export function QuizEngine({
   });
 
   const answersStateRef = useRef(answersState);
-  answersStateRef.current = answersState;
+  useEffect(() => {
+    answersStateRef.current = answersState;
+  }, [answersState]);
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -331,14 +334,24 @@ export function QuizEngine({
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 dark:bg-slate-950 overflow-hidden select-none">
       {/* Top Navbar */}
-      <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-20">
+      <header className="h-14 bg-slate-950 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-20 text-slate-100 shadow-sm shadow-black/20">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-bold text-base text-primary">
-            <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">Quizora</span>
+          <div className="flex items-center gap-2 select-none">
+            <Image
+              src="/logo.svg"
+              alt="Quizora Logo"
+              width={26}
+              height={26}
+              priority
+              unoptimized
+              className="w-6 h-6 shrink-0 object-contain"
+            />
+            <span className="font-brand font-black tracking-tight text-base sm:text-lg bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent leading-none">
+              Quizora
+            </span>
           </div>
-          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
-          <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate max-w-xs sm:max-w-md">
+          <span className="text-slate-700 hidden sm:inline">|</span>
+          <h2 className="text-xs sm:text-sm font-semibold text-slate-200 truncate max-w-xs sm:max-w-md">
             {testTitle || attempt.test?.title || 'Practice Session'}
           </h2>
         </div>

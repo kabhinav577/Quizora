@@ -12,12 +12,15 @@ import { getExams } from '@/services/exams';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { revalidatePath } from 'next/cache';
+import { ModernPagination } from '@/components/admin/ModernPagination';
 
 interface PageProps {
   searchParams: Promise<{
     examId?: string;
     testType?: string;
     status?: string;
+    page?: string;
+    pageSize?: string;
   }>;
 }
 
@@ -26,13 +29,15 @@ export default async function AdminTestsPage({ searchParams }: PageProps) {
   const examId = params.examId || '';
   const testType = params.testType || '';
   const status = params.status || '';
+  const page = Math.max(1, Number(params.page || '1'));
+  const pageSize = [10, 20, 50].includes(Number(params.pageSize)) ? Number(params.pageSize) : 20;
 
   const [exams, testsData] = await Promise.all([
     getExams(false),
-    listTests({ examId, testType, status, pageSize: 20 }),
+    listTests({ examId, testType, status, page, pageSize }),
   ]);
 
-  const { tests, total } = testsData;
+  const { tests, total, totalPages } = testsData;
 
   return (
     <div className="space-y-6">
@@ -250,6 +255,16 @@ export default async function AdminTestsPage({ searchParams }: PageProps) {
             })}
           </div>
         )}
+
+        {/* Modern Pagination Controls */}
+        <ModernPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50]}
+          itemLabel="tests"
+        />
       </div>
     </div>
   );
