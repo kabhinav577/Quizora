@@ -12,7 +12,6 @@ import {
   FileCheck,
   LayoutDashboard,
   ExternalLink,
-  ShieldCheck,
 } from 'lucide-react';
 
 const navItems = [
