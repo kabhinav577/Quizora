@@ -1,12 +1,8 @@
 import { Bookmark } from '@/types/database';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getStoredBookmarks, saveStoredBookmarks } from '@/lib/storage/diskStore';
 
-declare global {
-  var __localBookmarks: Bookmark[] | undefined;
-}
-
-export const localBookmarks: Bookmark[] =
-  globalThis.__localBookmarks ?? (globalThis.__localBookmarks = []);
+export const localBookmarks: Bookmark[] = getStoredBookmarks();
 
 /**
  * Checks whether a question is bookmarked by user
@@ -51,6 +47,7 @@ export async function toggleBookmark(
         (b) => b.user_id === userId && b.question_id === questionId
       );
       if (localIdx !== -1) localBookmarks.splice(localIdx, 1);
+      saveStoredBookmarks(localBookmarks);
       return { bookmarked: false };
     } else {
       const newBm: Bookmark = {
@@ -60,7 +57,8 @@ export async function toggleBookmark(
         created_at: new Date().toISOString(),
       };
       await supabase.from('bookmarks').insert(newBm);
-      localBookmarks.push(newBm);
+      localBookmarks.unshift(newBm);
+      saveStoredBookmarks(localBookmarks);
       return { bookmarked: true };
     }
   } catch {
@@ -70,8 +68,10 @@ export async function toggleBookmark(
   const localIdx = localBookmarks.findIndex(
     (b) => b.user_id === userId && b.question_id === questionId
   );
+
   if (localIdx !== -1) {
     localBookmarks.splice(localIdx, 1);
+    saveStoredBookmarks(localBookmarks);
     return { bookmarked: false };
   } else {
     const newBm: Bookmark = {
@@ -80,7 +80,8 @@ export async function toggleBookmark(
       question_id: questionId,
       created_at: new Date().toISOString(),
     };
-    localBookmarks.push(newBm);
+    localBookmarks.unshift(newBm);
+    saveStoredBookmarks(localBookmarks);
     return { bookmarked: true };
   }
 }

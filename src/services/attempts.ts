@@ -8,16 +8,15 @@ import { listQuestions } from './questions';
 import { calculateAttemptScore, AttemptScoreSummary } from '@/lib/quiz/scoring';
 
 
-// In-memory fallback store attached to globalThis to persist across Next.js dev server/turbopack contexts
-declare global {
-  var __localAttempts: Attempt[] | undefined;
-  var __localAttemptQuestions: AttemptQuestion[] | undefined;
-}
+import {
+  getStoredAttempts,
+  saveStoredAttempts,
+  getStoredAttemptQuestions,
+  saveStoredAttemptQuestions,
+} from '@/lib/storage/diskStore';
 
-export const localAttempts: Attempt[] =
-  globalThis.__localAttempts ?? (globalThis.__localAttempts = []);
-export const localAttemptQuestions: AttemptQuestion[] =
-  globalThis.__localAttemptQuestions ?? (globalThis.__localAttemptQuestions = []);
+export const localAttempts: Attempt[] = getStoredAttempts();
+export const localAttemptQuestions: AttemptQuestion[] = getStoredAttemptQuestions();
 
 /**
  * Fisher-Yates array shuffle helper
@@ -197,6 +196,8 @@ export async function startAttempt(
 
   localAttempts.unshift(newAttempt);
   localAttemptQuestions.push(...attemptQuestions);
+  saveStoredAttempts(localAttempts);
+  saveStoredAttemptQuestions(localAttemptQuestions);
 
   return {
     ...newAttempt,
@@ -306,6 +307,8 @@ export async function startPracticeSession(
 
   localAttempts.unshift(newAttempt);
   localAttemptQuestions.push(...attemptQuestions);
+  saveStoredAttempts(localAttempts);
+  saveStoredAttemptQuestions(localAttemptQuestions);
 
   return {
     ...newAttempt,
@@ -466,6 +469,7 @@ export async function saveAnswer(
     found.is_marked_for_review = isMarkedForReview;
     found.time_spent_seconds = Math.max(0, timeSpentSeconds);
     found.updated_at = nowStr;
+    saveStoredAttemptQuestions(localAttemptQuestions);
     return true;
   }
 
@@ -598,6 +602,9 @@ export async function submitAttempt(
     }
   }
 
+  saveStoredAttempts(localAttempts);
+  saveStoredAttemptQuestions(localAttemptQuestions);
+
   const finalAttemptWithDetails: AttemptWithDetails = {
     ...updatedAttempt,
     test: refreshed.test,
@@ -683,6 +690,8 @@ export async function startMistakesPractice(
 
   localAttempts.unshift(newAttempt);
   localAttemptQuestions.push(...newAttemptQuestions);
+  saveStoredAttempts(localAttempts);
+  saveStoredAttemptQuestions(localAttemptQuestions);
 
   return {
     ...newAttempt,

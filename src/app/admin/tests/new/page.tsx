@@ -12,7 +12,7 @@ export default async function NewTestPage() {
     getExams(true),
     getSubjects(),
     getTopics(),
-    listQuestions({ pageSize: 100 }),
+    listQuestions({ pageSize: 1000 }),
   ]);
 
   async function handleCreateTest(data: TestFormInput) {

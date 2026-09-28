@@ -20,7 +20,7 @@ export default async function EditTestPage({ params }: EditTestPageProps) {
     getExams(false),
     getSubjects(),
     getTopics(),
-    listQuestions({ pageSize: 100 }),
+    listQuestions({ pageSize: 1000 }),
   ]);
 
   if (!test) {

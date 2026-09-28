@@ -13,6 +13,12 @@ import {
   Layers,
   AlertCircle,
   Shuffle,
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  List,
+  FolderPlus,
+  CheckCircle2,
 } from 'lucide-react';
 import { Exam, Subject, Topic, Question } from '@/types/database';
 import { TestWithQuestions } from '@/services/tests';
@@ -101,6 +107,10 @@ export function TestBuilder({
   const [topicFilter, setTopicFilter] = React.useState('');
   const [difficultyFilter, setDifficultyFilter] = React.useState('');
 
+  // Subject View Mode: 'subject_grouped' (default) or 'flat_list'
+  const [viewMode, setViewMode] = React.useState<'subject_grouped' | 'flat_list'>('subject_grouped');
+  const [collapsedSubjects, setCollapsedSubjects] = React.useState<Record<string, boolean>>({});
+
   // Modals & Submissions
   const [previewModalOpen, setPreviewModalOpen] = React.useState(false);
   const [previewQuestion, setPreviewQuestion] = React.useState<Question | null>(null);
@@ -152,28 +162,102 @@ export function TestBuilder({
     );
   };
 
-  // Filter available questions
+  // Batch Selection per Subject
+  const selectAllInSubject = (questions: Question[]) => {
+    const unselectedIds = questions.map((q) => q.id).filter((id) => !selectedQuestionIds.includes(id));
+    if (unselectedIds.length > 0) {
+      setSelectedQuestionIds((prev) => [...prev, ...unselectedIds]);
+    }
+  };
+
+  const deselectAllInSubject = (questions: Question[]) => {
+    const idsToRemove = new Set(questions.map((q) => q.id));
+    setSelectedQuestionIds((prev) => prev.filter((id) => !idsToRemove.has(id)));
+  };
+
+  const toggleCollapseSubject = (subId: string) => {
+    setCollapsedSubjects((prev) => ({
+      ...prev,
+      [subId]: !prev[subId],
+    }));
+  };
+
+  // Filter available questions (exam, subject, topic, difficulty, search across text, subject, topic)
   const filteredAvailableQuestions = React.useMemo(() => {
+    const normalizedSearch = questionSearch.trim().toLowerCase();
+
     return availableQuestions.filter((q) => {
-      if (examId && q.exam_id !== examId) return false;
+      if (examId && q.exam_id !== examId && !(Array.isArray(q.exam_ids) && q.exam_ids.includes(examId))) return false;
       if (subjectFilter && q.subject_id !== subjectFilter) return false;
       if (topicFilter && q.topic_id !== topicFilter) return false;
       if (difficultyFilter && q.difficulty !== difficultyFilter) return false;
-      if (
-        questionSearch &&
-        !q.question_text.toLowerCase().includes(questionSearch.toLowerCase())
-      ) {
-        return false;
+
+      if (normalizedSearch) {
+        const textMatch = q.question_text.toLowerCase().includes(normalizedSearch);
+        const subName = q.subject_name || subjects.find((s) => s.id === q.subject_id)?.name || '';
+        const subMatch = subName.toLowerCase().includes(normalizedSearch);
+        const topName = q.topic_name || topics.find((t) => t.id === q.topic_id)?.name || '';
+        const topMatch = topName.toLowerCase().includes(normalizedSearch);
+        const explMatch = (q.explanation || '').toLowerCase().includes(normalizedSearch);
+        if (!textMatch && !subMatch && !topMatch && !explMatch) return false;
       }
       return true;
     });
-  }, [availableQuestions, examId, subjectFilter, topicFilter, difficultyFilter, questionSearch]);
+  }, [availableQuestions, examId, subjectFilter, topicFilter, difficultyFilter, questionSearch, subjects, topics]);
 
+  // Selected questions objects in current sequence
   const selectedQuestions = React.useMemo(() => {
     return selectedQuestionIds
       .map((id) => availableQuestions.find((q) => q.id === id))
       .filter((q): q is Question => Boolean(q));
   }, [selectedQuestionIds, availableQuestions]);
+
+  // Subject-wise grouping of available questions
+  interface SubjectGroup {
+    subjectId: string;
+    subjectName: string;
+    questions: Question[];
+    selectedCount: number;
+    totalCount: number;
+  }
+
+  const subjectGroups: SubjectGroup[] = React.useMemo(() => {
+    const groupMap = new Map<string, Question[]>();
+
+    filteredAvailableQuestions.forEach((q) => {
+      const sId = q.subject_id || 'unknown';
+      if (!groupMap.has(sId)) {
+        groupMap.set(sId, []);
+      }
+      groupMap.get(sId)!.push(q);
+    });
+
+    const groups: SubjectGroup[] = [];
+    groupMap.forEach((qList, sId) => {
+      const subObj = subjects.find((s) => s.id === sId);
+      const subName = subObj?.name || qList[0]?.subject_name || 'General Subject';
+      const selectedCount = qList.filter((q) => selectedQuestionIds.includes(q.id)).length;
+      groups.push({
+        subjectId: sId,
+        subjectName: subName,
+        questions: qList,
+        selectedCount,
+        totalCount: qList.length,
+      });
+    });
+
+    return groups.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+  }, [filteredAvailableQuestions, subjects, selectedQuestionIds]);
+
+  // Subject breakdown for selected questions
+  const selectedSubjectBreakdown = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    selectedQuestions.forEach((q) => {
+      const sName = q.subject_name || subjects.find((s) => s.id === q.subject_id)?.name || 'General';
+      counts.set(sName, (counts.get(sName) || 0) + 1);
+    });
+    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+  }, [selectedQuestions, subjects]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,27 +305,27 @@ export function TestBuilder({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Top action header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            {initialData ? 'Edit Test' : 'Test Builder'}
+            {initialData ? `Edit Test: ${initialData.title}` : 'Create New Test / Practice Session'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Configure examination mock tests and rapid practice sets with custom timer and scoring rules.
+            Build full mock tests or topic practice sessions with subject-wise question selection and countdown timers.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setPreviewModalOpen(true)}
-            className="text-xs gap-1 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+            className="text-xs gap-1.5"
           >
-            <Eye className="h-3.5 w-3.5" />
+            <Eye className="h-4 w-4 text-slate-500" />
             Preview Test
           </Button>
 
@@ -249,41 +333,45 @@ export function TestBuilder({
             type="submit"
             size="sm"
             disabled={isSubmitting}
-            className="text-xs gap-1.5 shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+            className="text-xs gap-1.5 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
           >
             <Save className="h-4 w-4" />
-            {isSubmitting ? 'Saving Test...' : 'Save & Publish Test'}
+            {isSubmitting ? 'Saving...' : initialData ? 'Update Test' : 'Save Test'}
           </Button>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-bold">Cannot save test</p>
-            <p>{errorMessage}</p>
-          </div>
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 flex items-center gap-3 text-red-700 dark:text-red-300 text-xs">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Grid: Left column (Parameters) | Right column (Questions Pool & Selector) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main 2-column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Test Configuration (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Card 1: Core Details */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* Card 1: Basic Information */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               <Layers className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              1. Test Metadata
+              1. Basic Information
             </h3>
 
+            {/* Exam selection */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Exam *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Target Examination <span className="text-red-500">*</span>
+              </label>
               <select
                 value={examId}
-                onChange={(e) => setExamId(e.target.value)}
-                className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => {
+                  setExamId(e.target.value);
+                  setSubjectFilter('');
+                  setTopicFilter('');
+                }}
+                className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {exams.map((ex) => (
                   <option key={ex.id} value={ex.id}>
@@ -293,47 +381,63 @@ export function TestBuilder({
               </select>
             </div>
 
+            {/* Test Title */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Test Title *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Test Title <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="e.g. Bihar STET Computer Science Mock Test 1"
-                required
+                placeholder="e.g. Bihar STET Computer Science Full Mock 1"
+                className="text-xs"
               />
             </div>
 
+            {/* URL Slug */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">URL Slug *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                URL Slug <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 placeholder="e.g. bihar-stet-cs-mock-1"
-                required
+                className="text-xs font-mono"
               />
             </div>
 
+            {/* Description */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Description / Instructions
+                Description
               </label>
               <Textarea
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Instructions for students taking this test..."
-                className="min-h-[80px]"
+                placeholder="Brief guidelines or syllabus covered in this test..."
+                className="text-xs"
               />
             </div>
 
+            {/* Test Type and Status */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Test Type</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Test Type
+                </label>
                 <select
                   value={testType}
-                  onChange={(e) =>
-                    setTestType(e.target.value as 'practice' | 'mock_test')
-                  }
-                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) => {
+                    const val = e.target.value as 'practice' | 'mock_test';
+                    setTestType(val);
+                    if (val === 'mock_test') {
+                      setHasDuration(true);
+                      setHasQuestionTimer(false);
+                    }
+                  }}
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="practice">Practice Mode</option>
                   <option value="mock_test">Full Mock Test</option>
@@ -341,12 +445,12 @@ export function TestBuilder({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Status
+                </label>
                 <select
                   value={status}
-                  onChange={(e) =>
-                    setStatus(e.target.value as 'draft' | 'published' | 'archived')
-                  }
+                  onChange={(e) => setStatus(e.target.value as 'draft' | 'published' | 'archived')}
                   className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="draft">Draft</option>
@@ -503,9 +607,9 @@ export function TestBuilder({
           </div>
         </div>
 
-        {/* Right Column: Question Selection & Ordering (7 cols) */}
+        {/* Right Column: Subject-Wise Question Selection & Ordering (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Selected Questions Pool */}
+          {/* Selected Questions Pool with Subject Breakdown */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
               <div>
@@ -521,23 +625,39 @@ export function TestBuilder({
                 <button
                   type="button"
                   onClick={() => setSelectedQuestionIds([])}
-                  className="text-xs text-red-500 hover:underline"
+                  className="text-xs text-red-500 hover:underline font-medium"
                 >
                   Clear All
                 </button>
               )}
             </div>
 
+            {/* Subject Balance Chips */}
+            {selectedSubjectBreakdown.length > 0 && (
+              <div className="px-4 py-2 bg-slate-100/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="text-slate-400 dark:text-slate-500 font-semibold mr-1">Subject Breakdown:</span>
+                {selectedSubjectBreakdown.map((sb) => (
+                  <Badge
+                    key={sb.name}
+                    variant="purple"
+                    className="text-[10px] py-0 px-2 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800"
+                  >
+                    {sb.name}: <strong className="ml-1 font-bold">{sb.count}</strong>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
             {selectedQuestions.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-xs">
-                No questions selected yet. Check questions from the catalog below to add them to this test.
+                No questions selected yet. Check questions from the subject-wise catalog below to add them to this test.
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-[380px] overflow-y-auto">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-[340px] overflow-y-auto">
                 {selectedQuestions.map((q, idx) => (
                   <div
                     key={q.id}
-                    className="p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-between gap-3 transition"
+                    className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-between gap-3 transition"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold">
@@ -548,10 +668,14 @@ export function TestBuilder({
                           {q.question_text}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                          <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                            {q.subject_name || subjects.find((s) => s.id === q.subject_id)?.name || 'General'}
+                          </span>
+                          <span>•</span>
                           <span>{q.options.length} Options</span>
                           <span>•</span>
                           <span>{q.difficulty}</span>
-                          {q.question_image_path && <span>• Has Diagram</span>}
+                          {q.question_image_path && <span>• Diagram</span>}
                         </div>
                       </div>
                     </div>
@@ -600,15 +724,46 @@ export function TestBuilder({
             )}
           </div>
 
-          {/* Question Catalog & Filter Picker */}
+          {/* Question Catalog & Subject-Wise Picker */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden space-y-3 p-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                Add Questions from Question Bank
-              </h3>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                {filteredAvailableQuestions.length} available
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 gap-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  Subject-Wise Question Catalog
+                </h3>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  {filteredAvailableQuestions.length} questions available across {subjectGroups.length} subjects
+                </span>
+              </div>
+
+              {/* View Mode Toggle: Subject-wise vs Flat List */}
+              <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('subject_grouped')}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition flex items-center gap-1 ${
+                    viewMode === 'subject_grouped'
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <FolderPlus className="h-3 w-3" />
+                  Subject Groups
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('flat_list')}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition flex items-center gap-1 ${
+                    viewMode === 'flat_list'
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <List className="h-3 w-3" />
+                  Flat List
+                </button>
+              </div>
             </div>
 
             {/* Filter controls */}
@@ -618,7 +773,7 @@ export function TestBuilder({
                 <Input
                   value={questionSearch}
                   onChange={(e) => setQuestionSearch(e.target.value)}
-                  placeholder="Search questions by text..."
+                  placeholder="Search questions by text, subject, topic, or explanation..."
                   className="pl-8 h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                 />
               </div>
@@ -627,11 +782,11 @@ export function TestBuilder({
                 <select
                   value={subjectFilter}
                   onChange={(e) => setSubjectFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                 >
                   <option value="">All Subjects</option>
                   {subjects
-                    .filter((s) => s.exam_id === examId)
+                    .filter((s) => !examId || s.exam_id === examId || (Array.isArray(s.exam_ids) && s.exam_ids.includes(examId)))
                     .map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -647,11 +802,13 @@ export function TestBuilder({
                   className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">All Topics</option>
-                  {topics.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
+                  {topics
+                    .filter((t) => !subjectFilter || t.subject_id === subjectFilter)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -669,43 +826,234 @@ export function TestBuilder({
               </div>
             </div>
 
-            {/* Available questions scrollable list */}
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-[360px] overflow-y-auto border rounded-lg border-slate-200 dark:border-slate-800">
-              {filteredAvailableQuestions.map((q) => {
-                const isSelected = selectedQuestionIds.includes(q.id);
-                return (
-                  <div
-                    key={q.id}
-                    onClick={() => toggleSelectQuestion(q.id)}
-                    className={`p-3 flex items-start gap-3 cursor-pointer transition ${
-                      isSelected
-                        ? 'bg-indigo-50/60 dark:bg-indigo-950/40'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
+            {/* Quick Subject Filter Chips */}
+            {subjectGroups.length > 1 && !subjectFilter && (
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[11px] no-scrollbar">
+                <span className="text-slate-400 dark:text-slate-500 font-semibold text-[10px] uppercase shrink-0">
+                  Quick Filter:
+                </span>
+                {subjectGroups.map((grp) => (
+                  <button
+                    key={grp.subjectId}
+                    type="button"
+                    onClick={() => setSubjectFilter(grp.subjectId)}
+                    className="shrink-0 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}} // handled by parent onClick
-                      className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer dark:bg-slate-800 dark:border-slate-700"
-                    />
+                    {grp.subjectName} ({grp.totalCount})
+                  </button>
+                ))}
+              </div>
+            )}
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                        {q.question_text}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                        <Badge variant="outline" className="text-[9px] py-0 px-1.5">
-                          {q.difficulty}
-                        </Badge>
-                        <span>{q.options.length} Options</span>
-                        {q.question_image_path && <span>• Diagram</span>}
-                      </div>
-                    </div>
+            {/* SUBJECT-GROUPED VIEW */}
+            {viewMode === 'subject_grouped' ? (
+              <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                {subjectGroups.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    No questions found matching your filters.
                   </div>
-                );
-              })}
-            </div>
+                ) : (
+                  subjectGroups.map((group) => {
+                    const isCollapsed = Boolean(collapsedSubjects[group.subjectId]);
+                    const allSelected = group.selectedCount === group.totalCount && group.totalCount > 0;
+
+                    return (
+                      <div
+                        key={group.subjectId}
+                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-2xs overflow-hidden transition"
+                      >
+                        {/* Subject Group Header */}
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => toggleCollapseSubject(group.subjectId)}
+                            className="flex items-center gap-2 text-left flex-1 min-w-0 font-bold text-xs text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                            )}
+                            <span className="truncate">{group.subjectName}</span>
+                            {allSelected && (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                                (All Selected)
+                              </span>
+                            )}
+                            <Badge
+                              variant="purple"
+                              className="text-[10px] py-0 px-2 shrink-0 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800"
+                            >
+                              {group.selectedCount} / {group.totalCount} selected
+                            </Badge>
+                          </button>
+
+                          {/* Quick Batch Select / Deselect Subject Questions */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {group.selectedCount < group.totalCount && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => selectAllInSubject(group.questions)}
+                                className="h-7 text-[10px] px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:border-indigo-800 dark:hover:bg-indigo-950/50 gap-1 font-semibold"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Select All ({group.totalCount})
+                              </Button>
+                            )}
+
+                            {group.selectedCount > 0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deselectAllInSubject(group.questions)}
+                                className="h-7 text-[10px] px-2 text-slate-500 hover:text-red-600"
+                              >
+                                Deselect
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Collapsible Questions List inside Subject */}
+                        {!isCollapsed && (
+                          <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                            {group.questions.map((q) => {
+                              const isSelected = selectedQuestionIds.includes(q.id);
+                              return (
+                                <div
+                                  key={q.id}
+                                  onClick={() => toggleSelectQuestion(q.id)}
+                                  className={`p-3 flex items-start gap-3 cursor-pointer transition ${
+                                    isSelected
+                                      ? 'bg-indigo-50/60 dark:bg-indigo-950/40'
+                                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {}} // handled by parent onClick
+                                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer dark:bg-slate-800 dark:border-slate-700"
+                                  />
+
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                                      {q.question_text}
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                      {q.topic_name && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[9px] py-0 px-1.5 text-slate-600 dark:text-slate-400"
+                                        >
+                                          {q.topic_name}
+                                        </Badge>
+                                      )}
+                                      <Badge variant="outline" className="text-[9px] py-0 px-1.5">
+                                        {q.difficulty}
+                                      </Badge>
+                                      <span>{q.options.length} Options</span>
+                                      {q.question_image_path && <span>• Diagram</span>}
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPreviewQuestion(q);
+                                    }}
+                                    className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 shrink-0"
+                                    title="Preview Question"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              /* FLAT LIST VIEW */
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/70 max-h-[460px] overflow-y-auto border rounded-lg border-slate-200 dark:border-slate-800">
+                {filteredAvailableQuestions.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    No questions found matching your filters.
+                  </div>
+                ) : (
+                  filteredAvailableQuestions.map((q) => {
+                    const isSelected = selectedQuestionIds.includes(q.id);
+                    const subName = q.subject_name || subjects.find((s) => s.id === q.subject_id)?.name || 'General';
+
+                    return (
+                      <div
+                        key={q.id}
+                        onClick={() => toggleSelectQuestion(q.id)}
+                        className={`p-3 flex items-start gap-3 cursor-pointer transition ${
+                          isSelected
+                            ? 'bg-indigo-50/60 dark:bg-indigo-950/40'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}} // handled by parent onClick
+                          className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer dark:bg-slate-800 dark:border-slate-700"
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                            {q.question_text}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                            <Badge
+                              variant="purple"
+                              className="text-[9px] py-0 px-1.5 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800"
+                            >
+                              {subName}
+                            </Badge>
+                            {q.topic_name && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] py-0 px-1.5 text-slate-600 dark:text-slate-400"
+                              >
+                                {q.topic_name}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-[9px] py-0 px-1.5">
+                              {q.difficulty}
+                            </Badge>
+                            <span>{q.options.length} Options</span>
+                            {q.question_image_path && <span>• Diagram</span>}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewQuestion(q);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 shrink-0"
+                          title="Preview Question"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -736,6 +1084,19 @@ export function TestBuilder({
                 </>
               )}
             </div>
+            {selectedSubjectBreakdown.length > 0 && (
+              <div className="pt-2 flex flex-wrap gap-1.5">
+                {selectedSubjectBreakdown.map((sb) => (
+                  <Badge
+                    key={sb.name}
+                    variant="purple"
+                    className="text-[10px] py-0 px-2 bg-indigo-50 text-indigo-700 border-indigo-200"
+                  >
+                    {sb.name}: {sb.count}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

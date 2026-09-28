@@ -62,6 +62,7 @@ export interface Exam {
 export interface Subject {
   id: string;
   exam_id: string;
+  exam_ids?: string[];
   name: string;
   slug: string;
   description: string | null;
@@ -92,10 +93,12 @@ export interface Topic {
  * - options: JSONB array of 4 or 5 options.
  * - correct_option: 1-5 integer.
  * - NO separate question_options table.
+ * - exam_ids: multiple exams associated with this single question without duplication.
  */
 export interface Question {
   id: string;
   exam_id: string;
+  exam_ids?: string[];
   subject_id: string;
   topic_id: string | null;
   question_type: QuestionType;
@@ -103,6 +106,7 @@ export interface Question {
   question_image_path: string | null;
   options: QuestionOptions;
   correct_option: CorrectOption;
+  correct_option_letter?: 'A' | 'B' | 'C' | 'D' | 'E';
   explanation: string | null;
   difficulty: DifficultyLevel;
   default_time_seconds: number | null;
@@ -114,6 +118,10 @@ export interface Question {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  subject_name?: string;
+  topic_name?: string;
+  exam_name?: string;
+  exam_names?: string[];
 }
 
 export interface Test {

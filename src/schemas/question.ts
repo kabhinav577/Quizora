@@ -44,6 +44,7 @@ export const QuestionOptionsSchema = z
 export const QuestionFormSchema = z
   .object({
     exam_id: z.string().uuid({ message: 'Valid Exam selection is required.' }),
+    exam_ids: z.array(z.string().uuid()).optional(),
     subject_id: z.string().uuid({ message: 'Valid Subject selection is required.' }),
     topic_id: z.string().uuid().nullable().optional(),
     question_type: z.literal('single_select').optional().default('single_select'),
@@ -55,6 +56,7 @@ export const QuestionFormSchema = z
       .int()
       .min(1, { message: 'Correct option must be at least 1 (A).' })
       .max(5, { message: 'Correct option cannot exceed 5 (E).' }),
+    correct_option_letter: z.enum(['A', 'B', 'C', 'D', 'E']).optional(),
     explanation: z.string().trim().nullable().optional(),
     difficulty: z.enum(['easy', 'medium', 'hard']).optional().default('medium'),
     default_time_seconds: z.coerce.number().int().positive().nullable().optional(),
@@ -84,41 +86,57 @@ const coerceRequiredText = (fieldName: string) =>
     return String(val).trim();
   }, z.string().min(1, { message: `${fieldName} is required.` }));
 
-const coerceDifficulty = z.preprocess((val) => {
-  if (!val) return 'medium';
+export const DifficultySchema = z.preprocess((val) => {
+  if (!val || String(val).trim() === '') return 'medium';
   const s = String(val).trim().toLowerCase();
   if (['easy', 'basic', 'beginner', 'simple', 'low', '1'].includes(s)) return 'easy';
+  if (['medium', 'intermediate', 'moderate', 'normal', '2'].includes(s)) return 'medium';
   if (['hard', 'expert', 'advanced', 'difficult', 'high', 'complex', '3'].includes(s)) return 'hard';
-  return 'medium';
-}, z.enum(['easy', 'medium', 'hard']).default('medium'));
+  return s; // keep invalid string so z.enum rejects it with validation error
+}, z.enum(['easy', 'medium', 'hard'], {
+  message: 'Invalid difficulty. Must be easy, medium, or hard.',
+}));
 
-const coercePositiveNumber = (defaultVal: number) =>
+const coercePositiveNumber = (fieldName: string, defaultVal: number) =>
   z.preprocess((val) => {
     if (val === null || val === undefined || val === '') return defaultVal;
     const n = Number(val);
     return isNaN(n) ? val : n;
-  }, z.number().positive().default(defaultVal));
+  }, z.number({ message: `${fieldName} must be a valid number.` }).positive({ message: `${fieldName} must be a positive number.` }).default(defaultVal));
 
-const coerceNonNegativeNumber = (defaultVal: number) =>
+const coerceNonNegativeNumber = (fieldName: string, defaultVal: number) =>
   z.preprocess((val) => {
     if (val === null || val === undefined || val === '') return defaultVal;
     const n = Number(val);
     return isNaN(n) ? val : n;
-  }, z.number().min(0).default(defaultVal));
+  }, z.number({ message: `${fieldName} must be a valid number.` }).min(0, { message: `${fieldName} cannot be negative.` }).default(defaultVal));
 
-const coerceOptionalPositiveInt = () =>
+const coerceOptionalPositiveInt = (fieldName: string) =>
   z.preprocess((val) => {
     if (val === null || val === undefined || val === '') return null;
     const n = Number(val);
     return isNaN(n) ? val : Math.round(n);
-  }, z.number().int().positive().nullable().optional());
+  }, z.number({ message: `${fieldName} must be a valid number.` }).int().positive({ message: `${fieldName} must be a positive integer.` }).nullable().optional());
 
 const coerceOptionalYear = () =>
   z.preprocess((val) => {
     if (val === null || val === undefined || val === '') return null;
     const n = Number(val);
     return isNaN(n) ? val : Math.round(n);
-  }, z.number().int().min(1950).max(2100).nullable().optional());
+  }, z.number({ message: 'Source year must be a valid number.' }).int().min(1950, { message: 'Source year must be between 1950 and 2100.' }).max(2100, { message: 'Source year must be between 1950 and 2100.' }).nullable().optional());
+
+export const OptionLetterSchema = z.preprocess((val) => {
+  if (val === null || val === undefined) return '';
+  const trimmed = String(val).trim().toUpperCase();
+  if (trimmed === '1') return 'A';
+  if (trimmed === '2') return 'B';
+  if (trimmed === '3') return 'C';
+  if (trimmed === '4') return 'D';
+  if (trimmed === '5') return 'E';
+  return trimmed;
+}, z.enum(['A', 'B', 'C', 'D', 'E'], {
+  message: 'Correct option must be one of A, B, C, D, or E.',
+}));
 
 /**
  * Bulk Import Row Schema (for CSV / Excel)
@@ -137,20 +155,20 @@ export const BulkImportRowSchema = z
     option_d_image: coerceText,
     option_e: coerceText,
     option_e_image: coerceText,
-    correct_option: z.coerce.number().int().min(1).max(5),
+    correct_option: OptionLetterSchema,
     explanation: coerceText,
-    exam: coerceRequiredText('Exam name or slug'),
-    subject: coerceRequiredText('Subject name or slug'),
-    topic: coerceText,
-    difficulty: coerceDifficulty,
-    default_time_seconds: coerceOptionalPositiveInt(),
-    marks: coercePositiveNumber(1.0),
-    negative_marks: coerceNonNegativeNumber(0.0),
+    exam: coerceRequiredText('Exam'),
+    subject: coerceRequiredText('Subject'),
+    topic: coerceRequiredText('Topic'),
+    difficulty: DifficultySchema,
+    default_time_seconds: coerceOptionalPositiveInt('Default time seconds'),
+    marks: coercePositiveNumber('Marks', 1.0),
+    negative_marks: coerceNonNegativeNumber('Negative marks', 0.0),
     source_name: coerceText,
     source_year: coerceOptionalYear(),
   })
   .superRefine((data, ctx) => {
-    // Validate Option A
+    // Validate Option A (required)
     if (!data.option_a && !data.option_a_image) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -158,7 +176,7 @@ export const BulkImportRowSchema = z
         path: ['option_a'],
       });
     }
-    // Validate Option B
+    // Validate Option B (required)
     if (!data.option_b && !data.option_b_image) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -166,7 +184,7 @@ export const BulkImportRowSchema = z
         path: ['option_b'],
       });
     }
-    // Validate Option C
+    // Validate Option C (required)
     if (!data.option_c && !data.option_c_image) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -174,7 +192,7 @@ export const BulkImportRowSchema = z
         path: ['option_c'],
       });
     }
-    // Validate Option D
+    // Validate Option D (required)
     if (!data.option_d && !data.option_d_image) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -183,13 +201,36 @@ export const BulkImportRowSchema = z
       });
     }
 
-    const hasOptionE = Boolean(data.option_e || data.option_e_image);
-    const totalOptions = hasOptionE ? 5 : 4;
-
-    if (data.correct_option > totalOptions) {
+    // Validate that correct_option matches a non-empty option
+    const letter = data.correct_option;
+    if (letter === 'A' && !data.option_a && !data.option_a_image) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Correct option is ${data.correct_option}, but only ${totalOptions} options are defined.`,
+        message: 'correct_option is A, but option_a is empty.',
+        path: ['correct_option'],
+      });
+    } else if (letter === 'B' && !data.option_b && !data.option_b_image) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correct_option is B, but option_b is empty.',
+        path: ['correct_option'],
+      });
+    } else if (letter === 'C' && !data.option_c && !data.option_c_image) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correct_option is C, but option_c is empty.',
+        path: ['correct_option'],
+      });
+    } else if (letter === 'D' && !data.option_d && !data.option_d_image) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correct_option is D, but option_d is empty.',
+        path: ['correct_option'],
+      });
+    } else if (letter === 'E' && !data.option_e && !data.option_e_image) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correct_option is E, but option_e is empty.',
         path: ['correct_option'],
       });
     }

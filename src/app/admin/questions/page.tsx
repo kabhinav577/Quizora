@@ -3,23 +3,22 @@ import Link from 'next/link';
 import {
   Plus,
   Search,
-  ImageIcon,
-  Copy,
-  Edit,
-  Archive,
-  Layers,
 } from 'lucide-react';
-import { listQuestions } from '@/services/questions';
+import { listQuestions, getQuestionSources } from '@/services/questions';
 import { getExams } from '@/services/exams';
+import { getSubjects } from '@/services/subjects';
+import { getTopics } from '@/services/topics';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ModernPagination } from '@/components/admin/ModernPagination';
+import { QuestionBankTable } from '@/components/admin/QuestionBankTable';
 
 interface PageProps {
   searchParams: Promise<{
     search?: string;
     examId?: string;
+    subjectId?: string;
+    topicId?: string;
     difficulty?: string;
     status?: string;
     hasImage?: string;
@@ -33,6 +32,8 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const search = params.search || '';
   const examId = params.examId || '';
+  const subjectId = params.subjectId || '';
+  const topicId = params.topicId || '';
   const difficulty = params.difficulty || '';
   const status = params.status || '';
   const hasImage = params.hasImage === 'true' ? true : params.hasImage === 'false' ? false : undefined;
@@ -42,11 +43,15 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
     ? Number(params.pageSize)
     : 15;
 
-  const [exams, questionData] = await Promise.all([
+  const [exams, subjects, topics, questionData, sources] = await Promise.all([
     getExams(false),
+    getSubjects(),
+    getTopics(subjectId || undefined),
     listQuestions({
       search,
       examId,
+      subjectId,
+      topicId,
       difficulty,
       status,
       hasImage,
@@ -54,9 +59,15 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
       page,
       pageSize,
     }),
+    getQuestionSources(),
   ]);
 
   const { questions, total, totalPages } = questionData;
+
+  // Filter subjects for the selected exam if examId is provided (supports shared subjects)
+  const availableSubjects = examId
+    ? subjects.filter((s) => s.exam_id === examId || (Array.isArray(s.exam_ids) && s.exam_ids.includes(examId)))
+    : subjects;
 
   return (
     <div className="space-y-6">
@@ -65,7 +76,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Question Bank</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Search, filter, edit, and manage all MCQ questions across exams and topics.
+            Search, filter, edit, and categorize all MCQ questions subject-wise across exams.
           </p>
         </div>
 
@@ -86,14 +97,14 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
 
       {/* Filter and Search Bar */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
-        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
           {/* Search Input */}
-          <div className="lg:col-span-2 relative">
+          <div className="sm:col-span-2 lg:col-span-2 relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
             <Input
               name="search"
               defaultValue={search}
-              placeholder="Search question text..."
+              placeholder="Search question text, subject, topic..."
               className="pl-9 text-xs"
             />
           </div>
@@ -109,6 +120,38 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
               {exams.map((ex) => (
                 <option key={ex.id} value={ex.id}>
                   {ex.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Subject Filter */}
+          <div>
+            <select
+              name="subjectId"
+              defaultValue={subjectId}
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            >
+              <option value="">All Subjects</option>
+              {availableSubjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Topic Filter */}
+          <div>
+            <select
+              name="topicId"
+              defaultValue={topicId}
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">All Topics</option>
+              {topics.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
             </select>
@@ -144,7 +187,7 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
 
           <input type="hidden" name="pageSize" value={pageSize} />
 
-          <div className="lg:col-span-5 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="sm:col-span-2 lg:col-span-7 flex flex-wrap items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs gap-3">
             <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
               <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                 <input
@@ -182,165 +225,19 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
         </form>
       </div>
 
-      {/* Question List Table */}
+      {/* Interactive Question Bank Table with Checkbox Multi-selection & Bulk Delete */}
+      <QuestionBankTable
+        questions={questions}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        subjectFilterName={availableSubjects.find((s) => s.id === subjectId)?.name}
+        sources={sources}
+      />
+
+      {/* Modern Pagination Controls */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/60">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Questions Found: <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{total}</span>
-            </span>
-            {total > 0 && (
-              <span className="hidden sm:inline-block text-xs text-slate-500 dark:text-slate-400 font-medium">
-                (Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)})
-              </span>
-            )}
-          </div>
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Page <strong className="font-semibold text-slate-800 dark:text-slate-200">{page}</strong> of{' '}
-            <strong className="font-semibold text-slate-800 dark:text-slate-200">{totalPages || 1}</strong>
-          </span>
-        </div>
-
-        {questions.length === 0 ? (
-          <div className="p-12 text-center">
-            <Layers className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600 mb-3" />
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No questions found</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Try adjusting your search criteria or create your first question.
-            </p>
-            <Link href="/admin/questions/new" className="inline-block mt-4">
-              <Button size="sm" className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
-                Create Question
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {questions.map((q) => {
-              const hasDiag = Boolean(q.question_image_path);
-              const hasOptImg = q.options.some((o) => Boolean(o.image_path));
-              const optCount = q.options.length;
-
-              return (
-                <div
-                  key={q.id}
-                  className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-2 flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        variant={
-                          q.status === 'published'
-                            ? 'success'
-                            : q.status === 'draft'
-                            ? 'warning'
-                            : 'secondary'
-                        }
-                        className="text-[10px] uppercase font-bold"
-                      >
-                        {q.status}
-                      </Badge>
-                      <Badge variant="outline" className="text-[10px]">
-                        {q.difficulty}
-                      </Badge>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {optCount} Options
-                      </Badge>
-
-                      {hasDiag && (
-                        <Badge variant="purple" className="text-[10px] gap-1">
-                          <ImageIcon className="h-3 w-3" />
-                          Diagram
-                        </Badge>
-                      )}
-
-                      {hasOptImg && (
-                        <Badge variant="default" className="text-[10px] gap-1">
-                          <ImageIcon className="h-3 w-3" />
-                          Option Images
-                        </Badge>
-                      )}
-
-                      {q.source_name && (
-                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                          {q.source_name} {q.source_year ? `'${q.source_year.toString().slice(-2)}` : ''}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-2">
-                      {q.question_text}
-                    </p>
-
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
-                      <span>Correct: Option {String.fromCharCode(64 + q.correct_option)}</span>
-                      <span>•</span>
-                      <span>Marks: +{q.marks}</span>
-                      {q.negative_marks > 0 && <span>(-{q.negative_marks})</span>}
-                      {q.default_time_seconds && (
-                        <>
-                          <span>•</span>
-                          <span>Time: {q.default_time_seconds}s</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Link href={`/admin/questions/${q.id}/edit`}>
-                      <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
-                        <Edit className="h-3.5 w-3.5 text-slate-500" />
-                        Edit
-                      </Button>
-                    </Link>
-
-                    <form
-                      action={async () => {
-                        'use server';
-                        const { duplicateQuestion } = await import('@/services/questions');
-                        await duplicateQuestion(q.id);
-                      }}
-                    >
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs gap-1 text-slate-600"
-                        title="Duplicate Question"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        Copy
-                      </Button>
-                    </form>
-
-                    {q.status !== 'archived' && (
-                      <form
-                        action={async () => {
-                          'use server';
-                          const { archiveQuestion } = await import('@/services/questions');
-                          await archiveQuestion(q.id);
-                        }}
-                      >
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-50"
-                          title="Archive Question"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                        </Button>
-                      </form>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Modern Pagination Controls */}
         <ModernPagination
           currentPage={page}
           totalPages={totalPages}

@@ -2,6 +2,12 @@ import { Test, TestQuestion, Question } from '@/types/database';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { TestFormInput, TestFormSchema } from '@/schemas/test';
 import { getQuestionById } from './questions';
+import {
+  getStoredTests,
+  saveStoredTests,
+  getStoredTestQuestions,
+  saveStoredTestQuestions,
+} from '@/lib/storage/diskStore';
 
 export interface TestWithQuestions extends Test {
   questions: (Question & { question_order: number })[];
@@ -56,7 +62,7 @@ export const MOCK_TEST_QUESTIONS: TestQuestion[] = [
   {
     id: '66666666-6666-6666-6666-666666666601',
     test_id: '55555555-5555-5555-5555-555555555501',
-    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a41',
+    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380001',
     question_order: 1,
     marks_override: null,
     negative_marks_override: null,
@@ -67,7 +73,7 @@ export const MOCK_TEST_QUESTIONS: TestQuestion[] = [
   {
     id: '66666666-6666-6666-6666-666666666602',
     test_id: '55555555-5555-5555-5555-555555555501',
-    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a42',
+    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380002',
     question_order: 2,
     marks_override: null,
     negative_marks_override: null,
@@ -78,7 +84,7 @@ export const MOCK_TEST_QUESTIONS: TestQuestion[] = [
   {
     id: '66666666-6666-6666-6666-666666666603',
     test_id: '55555555-5555-5555-5555-555555555501',
-    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a43',
+    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380003',
     question_order: 3,
     marks_override: null,
     negative_marks_override: null,
@@ -89,7 +95,7 @@ export const MOCK_TEST_QUESTIONS: TestQuestion[] = [
   {
     id: '66666666-6666-6666-6666-666666666604',
     test_id: '55555555-5555-5555-5555-555555555501',
-    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a44',
+    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380004',
     question_order: 4,
     marks_override: null,
     negative_marks_override: null,
@@ -100,7 +106,7 @@ export const MOCK_TEST_QUESTIONS: TestQuestion[] = [
   {
     id: '66666666-6666-6666-6666-666666666605',
     test_id: '55555555-5555-5555-5555-555555555501',
-    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a45',
+    question_id: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380005',
     question_order: 5,
     marks_override: null,
     negative_marks_override: null,
@@ -109,9 +115,6 @@ export const MOCK_TEST_QUESTIONS: TestQuestion[] = [
     updated_at: new Date().toISOString(),
   },
 ];
-
-const localTests: Test[] = [...MOCK_TESTS];
-const localTestQuestions: TestQuestion[] = [...MOCK_TEST_QUESTIONS];
 
 export interface TestFilters {
   examId?: string;
@@ -158,6 +161,7 @@ export async function listTests(filters: TestFilters = {}): Promise<{
     // fallback
   }
 
+  const localTests = getStoredTests();
   let items = [...localTests];
   if (examId) items = items.filter((t) => t.exam_id === examId);
   if (status) items = items.filter((t) => t.status === status);
@@ -177,6 +181,9 @@ export async function listTests(filters: TestFilters = {}): Promise<{
 }
 
 export async function getTestById(id: string): Promise<TestWithQuestions | null> {
+  const localTests = getStoredTests();
+  const localTestQuestions = getStoredTestQuestions();
+
   try {
     const supabase = await createServerSupabaseClient();
     const { data: testData, error: testError } = await supabase
@@ -226,6 +233,8 @@ export async function getTestById(id: string): Promise<TestWithQuestions | null>
 }
 
 export async function getTestBySlug(slug: string): Promise<TestWithQuestions | null> {
+  const localTests = getStoredTests();
+
   try {
     const supabase = await createServerSupabaseClient();
     const { data: testData, error: testError } = await supabase
@@ -245,7 +254,6 @@ export async function getTestBySlug(slug: string): Promise<TestWithQuestions | n
   if (!found) return null;
   return getTestById(found.id);
 }
-
 
 export async function createTest(input: TestFormInput, createdBy?: string): Promise<TestWithQuestions> {
   const parsed = TestFormSchema.parse(input);
@@ -272,6 +280,9 @@ export async function createTest(input: TestFormInput, createdBy?: string): Prom
     updated_at: new Date().toISOString(),
   };
 
+  const localTests = getStoredTests();
+  const localTestQuestions = getStoredTestQuestions();
+
   try {
     const supabase = await createServerSupabaseClient();
     const { data: createdTest, error } = await supabase
@@ -295,10 +306,14 @@ export async function createTest(input: TestFormInput, createdBy?: string): Prom
     // fallback
   }
 
-  localTests.unshift(newTest);
+  const updatedTests = [newTest, ...localTests];
+  saveStoredTests(updatedTests);
 
+  const newMappings: TestQuestion[] = [];
   const populatedQuestions: (Question & { question_order: number })[] = [];
-  parsed.question_ids.forEach(async (qid, idx) => {
+
+  for (let idx = 0; idx < parsed.question_ids.length; idx++) {
+    const qid = parsed.question_ids[idx];
     const mapping: TestQuestion = {
       id: crypto.randomUUID(),
       test_id: newTest.id,
@@ -310,10 +325,14 @@ export async function createTest(input: TestFormInput, createdBy?: string): Prom
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    localTestQuestions.push(mapping);
+    newMappings.push(mapping);
+
     const q = await getQuestionById(qid);
     if (q) populatedQuestions.push({ ...q, question_order: idx + 1 });
-  });
+  }
+
+  const updatedTestQuestions = [...localTestQuestions, ...newMappings];
+  saveStoredTestQuestions(updatedTestQuestions);
 
   return { ...newTest, questions: populatedQuestions };
 }
@@ -329,12 +348,14 @@ export async function updateTest(id: string, input: Partial<TestFormInput>): Pro
     updated_at: new Date().toISOString(),
   };
 
+  const localTests = getStoredTests();
+  let localTestQuestions = getStoredTestQuestions();
+
   try {
     const supabase = await createServerSupabaseClient();
     await supabase.from('tests').update(mergedTest).eq('id', id);
 
     if (input.question_ids) {
-      // Refresh mappings
       await supabase.from('test_questions').delete().eq('test_id', id);
       const mappings = input.question_ids.map((qid, idx) => ({
         id: crypto.randomUUID(),
@@ -350,29 +371,23 @@ export async function updateTest(id: string, input: Partial<TestFormInput>): Pro
     // fallback
   }
 
-  const idx = localTests.findIndex((t) => t.id === id);
-  if (idx !== -1) localTests[idx] = mergedTest;
+  const updatedTests = localTests.map((t) => (t.id === id ? mergedTest : t));
+  saveStoredTests(updatedTests);
 
   if (input.question_ids) {
-    // Remove old mappings from local
-    for (let i = localTestQuestions.length - 1; i >= 0; i--) {
-      if (localTestQuestions[i].test_id === id) {
-        localTestQuestions.splice(i, 1);
-      }
-    }
-    input.question_ids.forEach((qid, qIdx) => {
-      localTestQuestions.push({
-        id: crypto.randomUUID(),
-        test_id: id,
-        question_id: qid,
-        question_order: qIdx + 1,
-        marks_override: null,
-        negative_marks_override: null,
-        time_override_seconds: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-    });
+    localTestQuestions = localTestQuestions.filter((tq) => tq.test_id !== id);
+    const newMappings: TestQuestion[] = input.question_ids.map((qid, qIdx) => ({
+      id: crypto.randomUUID(),
+      test_id: id,
+      question_id: qid,
+      question_order: qIdx + 1,
+      marks_override: null,
+      negative_marks_override: null,
+      time_override_seconds: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+    saveStoredTestQuestions([...localTestQuestions, ...newMappings]);
   }
 
   return getTestById(id);

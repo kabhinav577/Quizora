@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "verify": "tsx scripts/verify.ts",
+    "test": "npm run verify"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
