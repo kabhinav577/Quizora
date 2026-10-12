@@ -13,6 +13,8 @@ export interface RawImportRow {
   topic?: string;
   question_text?: string;
   question_image?: string;
+  code_language?: string;
+  code_content?: string;
   option_a?: string;
   option_a_image?: string;
   option_b?: string;
@@ -159,108 +161,7 @@ function sanitizeRows(rawRows: Record<string, unknown>[]): RawImportRow[] {
   });
 }
 
-/**
- * Parses CSV, XLSX, or ZIP files into raw rows and in-memory image map
- */
-export async function parseImportFile(
-  file: File | Blob | ArrayBuffer | Uint8Array,
-  fileName: string
-): Promise<{
-  rows: RawImportRow[];
-  imagesMap: Map<string, Blob>;
-  error?: string;
-}> {
-  const isZip = fileName.endsWith('.zip');
-  const imagesMap = new Map<string, Blob>();
-
-  if (isZip) {
-    try {
-      const zip = new JSZip();
-      const zipContent = await zip.loadAsync(file);
-
-      let spreadsheetEntry: JSZip.JSZipObject | null = null;
-      const imagePromises: Promise<void>[] = [];
-
-      zipContent.forEach((relativePath, entry) => {
-        const lower = relativePath.toLowerCase();
-        if (
-          !entry.dir &&
-          (lower.endsWith('.xlsx') || lower.endsWith('.csv') || lower.endsWith('.xls')) &&
-          !lower.includes('__macosx')
-        ) {
-          spreadsheetEntry = entry;
-        }
-
-        // Collect images
-        if (
-          !entry.dir &&
-          (lower.endsWith('.png') ||
-            lower.endsWith('.jpg') ||
-            lower.endsWith('.jpeg') ||
-            lower.endsWith('.webp')) &&
-          !lower.includes('__macosx')
-        ) {
-          const baseName = relativePath.split('/').pop() || relativePath;
-          imagePromises.push(
-            entry.async('blob').then((blob) => {
-              imagesMap.set(baseName.toLowerCase(), blob);
-            })
-          );
-        }
-      });
-
-      await Promise.all(imagePromises);
-
-      if (!spreadsheetEntry) {
-        return {
-          rows: [],
-          imagesMap,
-          error: 'No Excel (.xlsx) or CSV file found inside the uploaded ZIP archive.',
-        };
-      }
-
-      const fileBuffer = await (spreadsheetEntry as JSZip.JSZipObject).async('arraybuffer');
-      const workbook = XLSX.read(fileBuffer, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-      const rows = sanitizeRows(rawRows);
-
-      return { rows, imagesMap };
-    } catch (err: unknown) {
-      return {
-        rows: [],
-        imagesMap,
-        error: `Failed to unpack ZIP archive: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      };
-    }
-  } else {
-    // Single CSV or XLSX
-    try {
-      let arrayBuffer: ArrayBuffer;
-      if (file instanceof ArrayBuffer) {
-        arrayBuffer = file;
-      } else if (file instanceof Uint8Array) {
-        arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
-      } else {
-        arrayBuffer = await file.arrayBuffer();
-      }
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-      const rows = sanitizeRows(rawRows);
-
-      return { rows, imagesMap };
-    } catch (err: unknown) {
-      return {
-        rows: [],
-        imagesMap,
-        error: `Failed to parse spreadsheet: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      };
-    }
-  }
-}
+export { parseImportFile, generateSampleCsv } from '@/lib/imports/clientParser';
 
 /**
  * Validates raw rows against database taxonomies and schema rules (READ-ONLY PREVIEW)
@@ -314,11 +215,72 @@ export async function validateImportData(
       return s.length > 0 ? s : null;
     };
 
+    const toRawCodeOrNull = (val: unknown): string | null => {
+      if (val === null || val === undefined) return null;
+      const s = String(val);
+      return s.trim().length > 0 ? s : null;
+    };
+
     // 1. Basic Question Text Validation
     const questionText = toStringOrNull(raw.question_text);
     if (!questionText) {
       errors.push({ rowIndex, field: 'question_text', message: 'Question text is required.' });
       continue;
+    }
+
+    // Code Question Validation Rules
+    const rawCodeLang = toStringOrNull(raw.code_language);
+    const rawCodeContent = toRawCodeOrNull(raw.code_content);
+    const placeholderCount = (questionText.match(/\{\{CODE\}\}/g) || []).length;
+
+    if (placeholderCount > 1) {
+      errors.push({
+        rowIndex,
+        field: 'question_text',
+        message: 'Only one {{CODE}} placeholder is supported per question in V2.',
+      });
+    }
+
+    if (placeholderCount === 1) {
+      if (!rawCodeLang) {
+        errors.push({
+          rowIndex,
+          field: 'code_language',
+          message: '{{CODE}} placeholder exists in question_text, but code_language is empty.',
+        });
+      }
+      if (!rawCodeContent) {
+        errors.push({
+          rowIndex,
+          field: 'code_content',
+          message: '{{CODE}} placeholder exists but code_content is empty.',
+        });
+      }
+    }
+
+    if (rawCodeContent) {
+      if (placeholderCount === 0) {
+        errors.push({
+          rowIndex,
+          field: 'question_text',
+          message: 'Code content exists but {{CODE}} placeholder is missing from question_text.',
+        });
+      }
+      if (!rawCodeLang) {
+        errors.push({
+          rowIndex,
+          field: 'code_language',
+          message: 'code_content is present but code_language is empty.',
+        });
+      }
+    }
+
+    if (rawCodeLang && !rawCodeContent) {
+      errors.push({
+        rowIndex,
+        field: 'code_content',
+        message: 'code_language is present but code_content is empty.',
+      });
     }
 
     // 2. Exam Validation (Support single exam or multiple delimited by "|")
@@ -429,7 +391,34 @@ export async function validateImportData(
     }
 
     // 4. Topic Validation (Reusable under Subject)
-    const rawTopicStr = toStringOrNull(raw.topic);
+    let rawTopicStr = toStringOrNull(raw.topic);
+
+    // Auto-classify topic for web development and dbms code questions if topic is missing or named after the language
+    if (rawCodeLang) {
+      const normalizedLang = rawCodeLang.toLowerCase().trim();
+      const webDevLangs = ['javascript', 'js', 'typescript', 'ts', 'xml', 'html', 'css'];
+      const dbmsLangs = ['sql'];
+
+      if (
+        !rawTopicStr ||
+        webDevLangs.includes(rawTopicStr.toLowerCase().trim()) ||
+        rawTopicStr.toLowerCase().trim() === 'web'
+      ) {
+        if (webDevLangs.includes(normalizedLang)) {
+          rawTopicStr = 'Web Development';
+        }
+      }
+
+      if (
+        !rawTopicStr ||
+        dbmsLangs.includes(rawTopicStr.toLowerCase().trim())
+      ) {
+        if (dbmsLangs.includes(normalizedLang)) {
+          rawTopicStr = 'DBMS';
+        }
+      }
+    }
+
     if (!rawTopicStr) {
       errors.push({ rowIndex, field: 'topic', message: 'Topic is required.' });
       continue;
@@ -684,6 +673,8 @@ export async function validateImportData(
       question_type: 'single_select',
       question_text: questionText,
       question_image_path: toStringOrNull(raw.question_image) || null,
+      code_language: rawCodeLang || null,
+      code_content: rawCodeContent || null,
       options: optionsArray,
       correct_option: correctOptNum || 1,
       correct_option_letter: correctLetter || 'A',
@@ -887,291 +878,4 @@ export async function commitBulkImport(
   }
 
   return { importedCount, skippedCount };
-}
-
-/**
- * Generates sample CSV string for admin download
- * Exactly ordered 23 columns supporting Bihar STET|Bihar TRE 4.0 and A/B/C/D/E correct_option
- */
-export function generateSampleCsv(): string {
-  const headers = [
-    'exam',
-    'subject',
-    'topic',
-    'question_text',
-    'question_image',
-    'option_a',
-    'option_a_image',
-    'option_b',
-    'option_b_image',
-    'option_c',
-    'option_c_image',
-    'option_d',
-    'option_d_image',
-    'option_e',
-    'option_e_image',
-    'correct_option',
-    'explanation',
-    'difficulty',
-    'default_time_seconds',
-    'marks',
-    'negative_marks',
-    'source_name',
-    'source_year',
-  ];
-
-  const sampleRows = [
-    [
-      '"Bihar STET|Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Computer Networks"',
-      '"Which layer of the OSI model is responsible for routing packets?"',
-      '""',
-      '"Application"',
-      '""',
-      '"Network"',
-      '""',
-      '"Transport"',
-      '""',
-      '"Data Link"',
-      '""',
-      '"Physical"',
-      '""',
-      '"B"',
-      '"The Network Layer provides logical addressing and routing between networks."',
-      '"Easy"',
-      '30',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar STET|Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Computer Networks"',
-      '"Which protocol is connection-oriented?"',
-      '""',
-      '"UDP"',
-      '""',
-      '"TCP"',
-      '""',
-      '"IP"',
-      '""',
-      '"ICMP"',
-      '""',
-      '""',
-      '""',
-      '"B"',
-      '"TCP establishes a connection before data transfer."',
-      '"Easy"',
-      '30',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Computer Networks"',
-      '"Which technique divides an IP network into smaller logical networks?"',
-      '""',
-      '"Multiplexing"',
-      '""',
-      '"Fragmentation"',
-      '""',
-      '"Subnetting"',
-      '""',
-      '"Encapsulation"',
-      '""',
-      '"Switching"',
-      '""',
-      '"C"',
-      '"Subnetting divides a network into smaller subnetworks."',
-      '"Medium"',
-      '45',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar STET"',
-      '"Computer Science"',
-      '"Data Structures"',
-      '"Which data structure follows the FIFO principle?"',
-      '""',
-      '"Stack"',
-      '""',
-      '"Queue"',
-      '""',
-      '"Tree"',
-      '""',
-      '"Graph"',
-      '""',
-      '""',
-      '""',
-      '"B"',
-      '"A queue follows First In First Out (FIFO)."',
-      '"Easy"',
-      '30',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar STET|Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Operating Systems"',
-      '"Which scheduling algorithm uses a fixed time quantum?"',
-      '""',
-      '"FCFS"',
-      '""',
-      '"SJF"',
-      '""',
-      '"Round Robin"',
-      '""',
-      '"Priority"',
-      '""',
-      '""',
-      '""',
-      '"C"',
-      '"Round Robin scheduling assigns processes a fixed time quantum."',
-      '"Easy"',
-      '30',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Compiler Design"',
-      '"Which compiler phase converts a character stream into tokens?"',
-      '""',
-      '"Syntax Analysis"',
-      '""',
-      '"Lexical Analysis"',
-      '""',
-      '"Semantic Analysis"',
-      '""',
-      '"Code Generation"',
-      '""',
-      '""',
-      '""',
-      '"B"',
-      '"Lexical analysis groups characters into tokens."',
-      '"Easy"',
-      '30',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar STET|Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"DBMS"',
-      '"Which normal form removes partial functional dependency?"',
-      '""',
-      '"1NF"',
-      '""',
-      '"2NF"',
-      '""',
-      '"3NF"',
-      '""',
-      '"BCNF"',
-      '""',
-      '""',
-      '""',
-      '"B"',
-      '"Second Normal Form removes partial dependency on a composite candidate key."',
-      '"Medium"',
-      '45',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Algorithms"',
-      '"Which algorithm uses divide-and-conquer and has average-case O(n log n) time?"',
-      '""',
-      '"Bubble Sort"',
-      '""',
-      '"Selection Sort"',
-      '""',
-      '"Merge Sort"',
-      '""',
-      '"Linear Search"',
-      '""',
-      '""',
-      '""',
-      '"C"',
-      '"Merge Sort uses divide-and-conquer and runs in O(n log n) time."',
-      '"Medium"',
-      '45',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar STET"',
-      '"Computer Science"',
-      '"Digital Logic"',
-      '"Which gate is known as a universal gate?"',
-      '""',
-      '"AND"',
-      '""',
-      '"OR"',
-      '""',
-      '"XOR"',
-      '""',
-      '"NAND"',
-      '""',
-      '""',
-      '""',
-      '"D"',
-      '"NAND and NOR are universal gates. NAND is one of them."',
-      '"Easy"',
-      '30',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-    [
-      '"Bihar TRE 4.0"',
-      '"Computer Science"',
-      '"Computer Networks"',
-      '"Which protocol is commonly used to securely transfer files over an SSH connection?"',
-      '""',
-      '"FTP"',
-      '""',
-      '"TFTP"',
-      '""',
-      '"SFTP"',
-      '""',
-      '"HTTP"',
-      '""',
-      '"HTTPS"',
-      '""',
-      '"C"',
-      '"SFTP provides secure file transfer over SSH."',
-      '"Medium"',
-      '45',
-      '1.0',
-      '0.25',
-      '"Practice"',
-      '2026',
-    ],
-  ];
-
-  return [headers.join(','), ...sampleRows.map((r) => r.join(','))].join('\n');
 }

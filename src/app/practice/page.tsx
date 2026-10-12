@@ -12,6 +12,7 @@ import {
   saveAnswerAction,
   submitAttemptAction,
   getAttemptDetailsAction,
+  abandonAttemptAction,
 } from '@/app/tests/actions';
 import { QuizEngine } from '@/components/quiz/QuizEngine';
 import { StudentHeader } from '@/components/layout/StudentHeader';
@@ -217,6 +218,17 @@ function PracticeModeContent() {
     );
   }
 
+  const handleExitPractice = async () => {
+    if (activeAttempt) {
+      try {
+        await abandonAttemptAction(activeAttempt.id);
+      } catch (err) {
+        console.error('Failed to abandon practice attempt:', err);
+      }
+    }
+    setActiveAttempt(null);
+  };
+
   // If in an active practice attempt, render QuizEngine
   if (activeAttempt) {
     return (
@@ -224,6 +236,7 @@ function PracticeModeContent() {
         attempt={activeAttempt}
         onSaveAnswer={handleSaveAnswer}
         onSubmitAttempt={handleSubmitAttempt}
+        onExitTest={handleExitPractice}
         testTitle="Dynamic Practice Session"
       />
     );

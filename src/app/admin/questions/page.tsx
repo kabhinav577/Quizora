@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {
   Plus,
   Search,
+  ChevronDown,
 } from 'lucide-react';
 import { listQuestions, getQuestionSources } from '@/services/questions';
 import { getExams } from '@/services/exams';
@@ -110,11 +111,11 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
           </div>
 
           {/* Exam Filter */}
-          <div>
+          <div className="relative min-w-0">
             <select
               name="examId"
               defaultValue={examId}
-              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
             >
               <option value="">All Exams</option>
               {exams.map((ex) => (
@@ -123,14 +124,15 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
                 </option>
               ))}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
           {/* Subject Filter */}
-          <div>
+          <div className="relative min-w-0">
             <select
               name="subjectId"
               defaultValue={subjectId}
-              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium appearance-none cursor-pointer truncate"
             >
               <option value="">All Subjects</option>
               {availableSubjects.map((s) => (
@@ -139,14 +141,15 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
                 </option>
               ))}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
           {/* Topic Filter */}
-          <div>
+          <div className="relative min-w-0">
             <select
               name="topicId"
               defaultValue={topicId}
-              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
             >
               <option value="">All Topics</option>
               {topics.map((t) => (
@@ -155,34 +158,37 @@ export default async function AdminQuestionsPage({ searchParams }: PageProps) {
                 </option>
               ))}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
           {/* Difficulty Filter */}
-          <div>
+          <div className="relative min-w-0">
             <select
               name="difficulty"
               defaultValue={difficulty}
-              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
             >
               <option value="">All Difficulties</option>
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
           {/* Status Filter */}
-          <div>
+          <div className="relative min-w-0">
             <select
               name="status"
               defaultValue={status}
-              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
             >
               <option value="">All Statuses</option>
               <option value="published">Published</option>
               <option value="draft">Draft</option>
               <option value="archived">Archived</option>
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
           <input type="hidden" name="pageSize" value={pageSize} />

@@ -7,6 +7,7 @@ import {
   startTestAttemptAction,
   saveAnswerAction,
   submitAttemptAction,
+  abandonAttemptAction,
 } from '@/app/tests/actions';
 import type { AttemptWithDetails } from '@/types/quiz';
 import { QuizEngine } from '@/components/quiz/QuizEngine';
@@ -133,11 +134,23 @@ export default function TestAttemptPage({ params }: AttemptPageProps) {
     );
   }
 
+  const handleExitTest = async () => {
+    if (attempt) {
+      try {
+        await abandonAttemptAction(attempt.id);
+      } catch (err) {
+        console.error('Failed to abandon attempt:', err);
+      }
+    }
+    router.push(`/tests/${slug}`);
+  };
+
   return (
     <QuizEngine
       attempt={attempt}
       onSaveAnswer={handleSaveAnswer}
       onSubmitAttempt={handleSubmitAttempt}
+      onExitTest={handleExitTest}
       testTitle={attempt.test?.title}
     />
   );

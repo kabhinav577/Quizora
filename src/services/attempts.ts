@@ -133,6 +133,8 @@ export async function startAttempt(
       question_id: q.id,
       question_text: q.question_text,
       question_image_path: q.question_image_path,
+      code_language: q.code_language || null,
+      code_content: q.code_content || null,
       options: finalOptions as import('@/types/database').QuestionOptions,
       correct_option: finalCorrectOption,
       explanation: q.explanation,
@@ -244,6 +246,8 @@ export async function startPracticeSession(
       question_id: q.id,
       question_text: q.question_text,
       question_image_path: q.question_image_path,
+      code_language: q.code_language || null,
+      code_content: q.code_content || null,
       options: [...q.options],
       correct_option: q.correct_option,
       explanation: q.explanation,
@@ -700,5 +704,32 @@ export async function startMistakesPractice(
     remaining_seconds: null,
     is_expired: false,
   };
+}
+
+/**
+ * Abandons an active in-progress attempt when a student leaves the test.
+ * This guarantees that when the student returns, a fresh attempt will be created
+ * and the test will restart from Question 1.
+ */
+export async function abandonAttempt(attemptId: string): Promise<boolean> {
+  const nowStr = new Date().toISOString();
+  try {
+    const supabase = await createServerSupabaseClient();
+    await supabase
+      .from('attempts')
+      .update({ status: 'abandoned', updated_at: nowStr })
+      .eq('id', attemptId);
+  } catch {
+    // fallback
+  }
+
+  const local = localAttempts.find((a) => a.id === attemptId);
+  if (local) {
+    local.status = 'abandoned';
+    local.updated_at = nowStr;
+    saveStoredAttempts(localAttempts);
+  }
+
+  return true;
 }
 

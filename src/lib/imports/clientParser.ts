@@ -1,9 +1,11 @@
+import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { RawImportRow } from '@/services/imports';
 
 /**
- * Parses CSV, XLSX, or ZIP files in browser or server
+ * Parses CSV, XLSX, or ZIP files in browser or server.
+ * Uses PapaParse for CSV to preserve multiline code, quotes, indentation, and newlines accurately.
  */
 export async function parseImportFile(
   file: File | Blob | ArrayBuffer | Uint8Array,
@@ -13,7 +15,7 @@ export async function parseImportFile(
   imagesMap: Map<string, Blob>;
   error?: string;
 }> {
-  const isZip = fileName.endsWith('.zip');
+  const isZip = fileName.toLowerCase().endsWith('.zip');
   const imagesMap = new Map<string, Blob>();
 
   if (isZip) {
@@ -62,14 +64,24 @@ export async function parseImportFile(
         };
       }
 
-      const fileBuffer = await (spreadsheetEntry as JSZip.JSZipObject).async('arraybuffer');
-      const workbook = XLSX.read(fileBuffer, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-      const rows = sanitizeRows(rawRows);
-
-      return { rows, imagesMap };
+      const entryName = (spreadsheetEntry as JSZip.JSZipObject).name.toLowerCase();
+      if (entryName.endsWith('.csv')) {
+        const csvText = await (spreadsheetEntry as JSZip.JSZipObject).async('string');
+        const parsed = Papa.parse<Record<string, unknown>>(csvText, {
+          header: true,
+          skipEmptyLines: 'greedy',
+        });
+        const rows = sanitizeRows(parsed.data);
+        return { rows, imagesMap };
+      } else {
+        const fileBuffer = await (spreadsheetEntry as JSZip.JSZipObject).async('arraybuffer');
+        const workbook = XLSX.read(fileBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+        const rows = sanitizeRows(rawRows);
+        return { rows, imagesMap };
+      }
     } catch (err: unknown) {
       return {
         rows: [],
@@ -80,21 +92,40 @@ export async function parseImportFile(
   } else {
     // Single CSV or XLSX
     try {
-      let arrayBuffer: ArrayBuffer;
-      if (file instanceof ArrayBuffer) {
-        arrayBuffer = file;
-      } else if (file instanceof Uint8Array) {
-        arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+      if (fileName.toLowerCase().endsWith('.csv')) {
+        let csvText: string;
+        if (typeof (file as File).text === 'function') {
+          csvText = await (file as File).text();
+        } else if (file instanceof ArrayBuffer) {
+          csvText = new TextDecoder('utf-8').decode(file);
+        } else if (file instanceof Uint8Array) {
+          csvText = new TextDecoder('utf-8').decode(file);
+        } else {
+          const buf = await (file as Blob).arrayBuffer();
+          csvText = new TextDecoder('utf-8').decode(buf);
+        }
+        const parsed = Papa.parse<Record<string, unknown>>(csvText, {
+          header: true,
+          skipEmptyLines: 'greedy',
+        });
+        const rows = sanitizeRows(parsed.data);
+        return { rows, imagesMap };
       } else {
-        arrayBuffer = await file.arrayBuffer();
+        let arrayBuffer: ArrayBuffer;
+        if (file instanceof ArrayBuffer) {
+          arrayBuffer = file;
+        } else if (file instanceof Uint8Array) {
+          arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+        } else {
+          arrayBuffer = await (file as Blob).arrayBuffer();
+        }
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+        const rows = sanitizeRows(rawRows);
+        return { rows, imagesMap };
       }
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-      const rows = sanitizeRows(rawRows);
-
-      return { rows, imagesMap };
     } catch (err: unknown) {
       return {
         rows: [],
@@ -107,8 +138,8 @@ export async function parseImportFile(
 
 /**
  * Strips non-enumerable properties (such as __rowNum__ added by XLSX)
- * and UTF-8 BOM characters from keys, guaranteeing 100% plain objects
- * that can be safely serialized over Next.js Server Actions.
+ * and UTF-8 BOM characters from keys, preserving exact raw indentation
+ * and newlines for values (critical for code_content).
  */
 function sanitizeRows(rawRows: Record<string, unknown>[]): RawImportRow[] {
   return rawRows.map((row) => {
@@ -130,7 +161,7 @@ function sanitizeRows(rawRows: Record<string, unknown>[]): RawImportRow[] {
 }
 
 /**
- * Generates sample CSV string for admin download
+ * Generates sample CSV string for admin download (Quizora V2 25-column format)
  */
 export function generateSampleCsv(): string {
   const headers = [
@@ -139,6 +170,8 @@ export function generateSampleCsv(): string {
     'topic',
     'question_text',
     'question_image',
+    'code_language',
+    'code_content',
     'option_a',
     'option_a_image',
     'option_b',
@@ -166,6 +199,8 @@ export function generateSampleCsv(): string {
       '"Computer Networks"',
       '"Which layer of the OSI model is responsible for routing packets?"',
       '""',
+      '""',
+      '""',
       '"Application"',
       '""',
       '"Network"',
@@ -190,6 +225,8 @@ export function generateSampleCsv(): string {
       '"Computer Science"',
       '"Computer Networks"',
       '"Which protocol is connection-oriented?"',
+      '""',
+      '""',
       '""',
       '"UDP"',
       '""',
@@ -216,6 +253,8 @@ export function generateSampleCsv(): string {
       '"Computer Networks"',
       '"Which technique divides an IP network into smaller logical networks?"',
       '""',
+      '""',
+      '""',
       '"Multiplexing"',
       '""',
       '"Fragmentation"',
@@ -240,6 +279,8 @@ export function generateSampleCsv(): string {
       '"Computer Science"',
       '"Data Structures"',
       '"Which data structure follows the FIFO principle?"',
+      '""',
+      '""',
       '""',
       '"Stack"',
       '""',
@@ -266,6 +307,8 @@ export function generateSampleCsv(): string {
       '"Operating Systems"',
       '"Which scheduling algorithm uses a fixed time quantum?"',
       '""',
+      '""',
+      '""',
       '"FCFS"',
       '""',
       '"SJF"',
@@ -290,6 +333,8 @@ export function generateSampleCsv(): string {
       '"Computer Science"',
       '"Compiler Design"',
       '"Which compiler phase converts a character stream into tokens?"',
+      '""',
+      '""',
       '""',
       '"Syntax Analysis"',
       '""',
@@ -316,6 +361,8 @@ export function generateSampleCsv(): string {
       '"DBMS"',
       '"Which normal form removes partial functional dependency?"',
       '""',
+      '""',
+      '""',
       '"1NF"',
       '""',
       '"2NF"',
@@ -340,6 +387,8 @@ export function generateSampleCsv(): string {
       '"Computer Science"',
       '"Algorithms"',
       '"Which algorithm uses divide-and-conquer and has average-case O(n log n) time?"',
+      '""',
+      '""',
       '""',
       '"Bubble Sort"',
       '""',
@@ -366,6 +415,8 @@ export function generateSampleCsv(): string {
       '"Digital Logic"',
       '"Which gate is known as a universal gate?"',
       '""',
+      '""',
+      '""',
       '"AND"',
       '""',
       '"OR"',
@@ -391,6 +442,8 @@ export function generateSampleCsv(): string {
       '"Computer Networks"',
       '"Which protocol is commonly used to securely transfer files over an SSH connection?"',
       '""',
+      '""',
+      '""',
       '"FTP"',
       '""',
       '"TFTP"',
@@ -408,6 +461,143 @@ export function generateSampleCsv(): string {
       '1',
       '0.25',
       '"Practice"',
+      '2026',
+    ],
+    [
+      '"Bihar STET|Bihar TRE 4.0"',
+      '"Computer Science"',
+      '"JavaScript"',
+      `"What is the output?
+
+{{CODE}}
+
+Choose the correct output."`,
+      '""',
+      '"javascript"',
+      `"let x = 1;
+
+{
+  let x = 2;
+}
+
+console.log(x);"`,
+      '1',
+      '""',
+      '2',
+      '""',
+      'undefined',
+      '""',
+      'Error',
+      '""',
+      '""',
+      '""',
+      '"A"',
+      '"The inner let x is block-scoped, so the outer x remains 1."',
+      '"Medium"',
+      '45',
+      '1',
+      '0.25',
+      '"Quizora Code Sample"',
+      '2026',
+    ],
+    [
+      '"Bihar STET|Bihar TRE 4.0"',
+      '"Computer Science"',
+      '"C++"',
+      `"Consider the following code:
+
+{{CODE}}
+
+What is the important issue with this code?"`,
+      '""',
+      '"cpp"',
+      `"class A {
+    int x;
+    int y;
+public:
+    A() : y(20), x(y) {}
+};"`,
+      '"y is initialized before x because it appears first in the initializer list"',
+      '""',
+      '"x is initialized before y because members follow declaration order"',
+      '""',
+      '"Both are initialized simultaneously"',
+      '""',
+      '"Compilation always fails"',
+      '""',
+      '""',
+      '""',
+      '"B"',
+      '"C++ initializes data members in their declaration order, not the order written in the initializer list."',
+      '"Medium"',
+      '60',
+      '1',
+      '0.25',
+      '"Quizora Code Sample"',
+      '2026',
+    ],
+    [
+      '"Bihar STET|Bihar TRE 4.0"',
+      '"Computer Science"',
+      '"XML"',
+      `"Which XML document is well-formed?
+
+{{CODE}}"`,
+      '""',
+      '"xml"',
+      `"<student>
+  <name>Rahul</name>
+</student>"`,
+      '"Option A"',
+      '""',
+      '"Option B"',
+      '""',
+      '"Option C"',
+      '""',
+      '"Option D"',
+      '""',
+      '""',
+      '""',
+      '"B"',
+      '"The opening and closing tags are properly nested and matched."',
+      '"Easy"',
+      '30',
+      '1',
+      '0.25',
+      '"Quizora Code Sample"',
+      '2026',
+    ],
+    [
+      '"Bihar STET|Bihar TRE 4.0"',
+      '"Computer Science"',
+      '"SQL"',
+      `"Which query returns all students with marks greater than 80?
+
+{{CODE}}
+
+Select the correct answer."`,
+      '""',
+      '"sql"',
+      `"SELECT *
+FROM students
+WHERE marks > 80;"`,
+      '"It returns students with marks less than 80"',
+      '""',
+      '"It returns students with marks equal to 80"',
+      '""',
+      '"It returns students with marks greater than 80"',
+      '""',
+      '"It returns every student"',
+      '""',
+      '""',
+      '""',
+      '"C"',
+      '"The WHERE condition filters rows whose marks value is greater than 80."',
+      '"Easy"',
+      '30',
+      '1',
+      '0.25',
+      '"Quizora Code Sample"',
       '2026',
     ],
   ];

@@ -6,6 +6,7 @@ import {
   Archive,
   CheckCircle2,
   Edit,
+  ChevronDown,
 } from 'lucide-react';
 import { listTests, archiveTest, publishTest } from '@/services/tests';
 import { getExams } from '@/services/exams';
@@ -66,11 +67,11 @@ export default async function AdminTestsPage({ searchParams }: PageProps) {
       {/* Filter Bar */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
         <form method="GET" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
+          <div className="relative min-w-0">
             <select
               name="examId"
               defaultValue={examId}
-              className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
             >
               <option value="">All Examinations</option>
               {exams.map((e) => (
@@ -79,35 +80,40 @@ export default async function AdminTestsPage({ searchParams }: PageProps) {
                 </option>
               ))}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
-          <div>
+          <div className="relative min-w-0">
             <select
               name="testType"
               defaultValue={testType}
-              className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
             >
               <option value="">All Test Types</option>
               <option value="practice">Practice Mode</option>
               <option value="mock_test">Mock Test</option>
             </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              name="status"
-              defaultValue={status}
-              className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="archived">Archived</option>
-            </select>
+            <div className="relative flex-1 min-w-0">
+              <select
+                name="status"
+                defaultValue={status}
+                className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
+              >
+                <option value="">All Statuses</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+            </div>
             <Button
               type="submit"
               size="sm"
-              className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4"
+              className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 shrink-0"
             >
               Filter
             </Button>

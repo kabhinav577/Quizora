@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { startMistakesHubPracticeAction } from '@/app/dashboard/actions';
 import { ImageLightbox } from '@/components/media/ImageLightbox';
+import { QuizoraQuestionContent } from '@/components/code/QuizoraQuestionContent';
 
 interface MistakesClientProps {
   initialMistakes: MistakeQuestionItem[];
@@ -287,9 +288,12 @@ export function MistakesClient({ initialMistakes }: MistakesClientProps) {
 
                     {/* Question Statement */}
                     <div className="space-y-3">
-                      <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-relaxed">
-                        {snapshot.question_text}
-                      </p>
+                      <QuizoraQuestionContent
+                        questionText={snapshot.question_text}
+                        codeLanguage={snapshot.code_language}
+                        codeContent={snapshot.code_content}
+                        textClassName="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-relaxed"
+                      />
 
                       {/* Question Diagram if present */}
                       {snapshot.question_image_path && (

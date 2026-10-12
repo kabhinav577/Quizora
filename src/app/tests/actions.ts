@@ -8,6 +8,7 @@ import {
   startPracticeSession,
   getAttemptById,
   startMistakesPractice,
+  abandonAttempt,
 } from '@/services/attempts';
 import { getTestBySlug } from '@/services/tests';
 import { listExams } from '@/services/exams';
@@ -60,6 +61,10 @@ export async function submitAttemptAction(
   }[]
 ) {
   return await submitAttempt(attemptId, finalAnswers);
+}
+
+export async function abandonAttemptAction(attemptId: string) {
+  return await abandonAttempt(attemptId);
 }
 
 export async function startPracticeSessionAction(options: {

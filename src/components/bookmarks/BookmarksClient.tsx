@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { QuizoraQuestionContent } from '@/components/code/QuizoraQuestionContent';
 import {
   Bookmark,
   BookmarkCheck,
@@ -276,9 +277,12 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
 
                     {/* Question Statement */}
                     <div className="space-y-3">
-                      <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-relaxed">
-                        {question.question_text}
-                      </p>
+                      <QuizoraQuestionContent
+                        questionText={question.question_text}
+                        codeLanguage={question.code_language}
+                        codeContent={question.code_content}
+                        textClassName="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-relaxed"
+                      />
 
                       {/* Question Diagram if present */}
                       {question.question_image_path && (

@@ -364,21 +364,24 @@ export function TestBuilder({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Target Examination <span className="text-red-500">*</span>
               </label>
-              <select
-                value={examId}
-                onChange={(e) => {
-                  setExamId(e.target.value);
-                  setSubjectFilter('');
-                  setTopicFilter('');
-                }}
-                className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {exams.map((ex) => (
-                  <option key={ex.id} value={ex.id}>
-                    {ex.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative min-w-0">
+                <select
+                  value={examId}
+                  onChange={(e) => {
+                    setExamId(e.target.value);
+                    setSubjectFilter('');
+                    setTopicFilter('');
+                  }}
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
+                >
+                  {exams.map((ex) => (
+                    <option key={ex.id} value={ex.id}>
+                      {ex.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              </div>
             </div>
 
             {/* Test Title */}
@@ -427,36 +430,42 @@ export function TestBuilder({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Test Type
                 </label>
-                <select
-                  value={testType}
-                  onChange={(e) => {
-                    const val = e.target.value as 'practice' | 'mock_test';
-                    setTestType(val);
-                    if (val === 'mock_test') {
-                      setHasDuration(true);
-                      setHasQuestionTimer(false);
-                    }
-                  }}
-                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="practice">Practice Mode</option>
-                  <option value="mock_test">Full Mock Test</option>
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    value={testType}
+                    onChange={(e) => {
+                      const val = e.target.value as 'practice' | 'mock_test';
+                      setTestType(val);
+                      if (val === 'mock_test') {
+                        setHasDuration(true);
+                        setHasQuestionTimer(false);
+                      }
+                    }}
+                    className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
+                  >
+                    <option value="practice">Practice Mode</option>
+                    <option value="mock_test">Full Mock Test</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Status
                 </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as 'draft' | 'published' | 'archived')}
-                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="archived">Archived</option>
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as 'draft' | 'published' | 'archived')}
+                    className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                </div>
               </div>
             </div>
           </div>
@@ -778,11 +787,11 @@ export function TestBuilder({
                 />
               </div>
 
-              <div>
+              <div className="relative min-w-0">
                 <select
                   value={subjectFilter}
                   onChange={(e) => setSubjectFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium appearance-none cursor-pointer truncate"
                 >
                   <option value="">All Subjects</option>
                   {subjects
@@ -793,13 +802,14 @@ export function TestBuilder({
                       </option>
                     ))}
                 </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
               </div>
 
-              <div>
+              <div className="relative min-w-0">
                 <select
                   value={topicFilter}
                   onChange={(e) => setTopicFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
                 >
                   <option value="">All Topics</option>
                   {topics
@@ -810,19 +820,21 @@ export function TestBuilder({
                       </option>
                     ))}
                 </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
               </div>
 
-              <div>
+              <div className="relative min-w-0">
                 <select
                   value={difficultyFilter}
                   onChange={(e) => setDifficultyFilter(e.target.value)}
-                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer truncate"
                 >
                   <option value="">All Difficulties</option>
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
                 </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
               </div>
             </div>
 

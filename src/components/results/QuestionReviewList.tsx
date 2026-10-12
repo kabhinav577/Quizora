@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AttemptQuestion } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { ImageLightbox } from '@/components/media/ImageLightbox';
+import { QuizoraQuestionContent } from '@/components/code/QuizoraQuestionContent';
 
 import { QuestionReportModal } from './QuestionReportModal';
 import { toggleBookmarkAction } from '@/app/tests/actions';
@@ -283,9 +284,12 @@ export function QuestionReviewList({
 
                 {/* Question Body */}
                 <div className="p-6 space-y-5">
-                  <p className="text-base text-slate-900 dark:text-slate-100 font-medium leading-relaxed whitespace-pre-wrap">
-                    {snapshot.question_text}
-                  </p>
+                  <QuizoraQuestionContent
+                    questionText={snapshot.question_text}
+                    codeLanguage={snapshot.code_language}
+                    codeContent={snapshot.code_content}
+                    textClassName="text-base text-slate-900 dark:text-slate-100 font-medium leading-relaxed"
+                  />
 
                   {/* Diagram / Image */}
                   {snapshot.question_image_path && (

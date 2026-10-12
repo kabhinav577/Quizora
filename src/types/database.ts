@@ -104,6 +104,8 @@ export interface Question {
   question_type: QuestionType;
   question_text: string;
   question_image_path: string | null;
+  code_language?: string | null;
+  code_content?: string | null;
   options: QuestionOptions;
   correct_option: CorrectOption;
   correct_option_letter?: 'A' | 'B' | 'C' | 'D' | 'E';
@@ -185,6 +187,8 @@ export interface QuestionSnapshot {
   question_id?: string;
   question_text: string;
   question_image_path: string | null;
+  code_language?: string | null;
+  code_content?: string | null;
   options: QuestionOptions;
   correct_option: CorrectOption;
   explanation: string | null;

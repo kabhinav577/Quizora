@@ -8,6 +8,7 @@ import { QuizTimer } from './QuizTimer';
 import { QuestionPalette, QuestionStatusItem } from './QuestionPalette';
 import { QuizQuestionView } from './QuizQuestionView';
 import { QuizSubmitModal } from './QuizSubmitModal';
+import { QuizExitModal } from './QuizExitModal';
 import { Button } from '@/components/ui/button';
 import {
   Maximize2,
@@ -15,6 +16,7 @@ import {
   Menu,
   X,
   Send,
+  LogOut,
 } from 'lucide-react';
 
 interface QuizEngineProps {
@@ -34,6 +36,7 @@ interface QuizEngineProps {
     }>
   ) => Promise<void>;
   testTitle?: string;
+  onExitTest?: () => Promise<void> | void;
 }
 
 export function QuizEngine({
@@ -41,6 +44,7 @@ export function QuizEngine({
   onSaveAnswer,
   onSubmitAttempt,
   testTitle,
+  onExitTest,
 }: QuizEngineProps) {
   const questions = attempt.questions;
   const totalQuestions = questions.length;
@@ -79,6 +83,8 @@ export function QuizEngine({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -109,17 +115,80 @@ export function QuizEngine({
     return () => clearInterval(interval);
   }, [currentQId]);
 
-  // Window unload warning if attempt in progress
+  // URL & Browser Back-Button Interception (popstate)
+  // When a student clicks the browser's Back button, prevent immediate exit,
+  // re-push history state to stay on the page, and display the "You are leaving test" warning modal.
+  useEffect(() => {
+    // Push an initial marker state to detect back-button navigation
+    window.history.pushState({ inQuizSession: true }, '', window.location.href);
+
+    const handlePopState = () => {
+      // Re-push state so URL doesn't exit immediately before confirmation
+      window.history.pushState({ inQuizSession: true }, '', window.location.href);
+      // Open the exit warning prompt modal
+      setIsExitModalOpen(true);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Window unload & close warning, and pagehide beacon abandonment
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!isSubmitting) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = 'You are currently in an active examination. Leaving will reset your test session.';
+        return 'You are currently in an active examination. Leaving will reset your test session.';
       }
     };
+
+    const handlePageHide = () => {
+      if (!isSubmitting) {
+        // Beacon request marks attempt abandoned so returning restarts from question 1
+        navigator.sendBeacon(
+          '/api/tests/abandon',
+          JSON.stringify({ attemptId: attempt.id })
+        );
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isSubmitting]);
+    window.addEventListener('pagehide', handlePageHide);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [isSubmitting, attempt.id]);
+
+  // Handle Confirmed Exit from Test
+  const handleConfirmExit = useCallback(async () => {
+    setIsExiting(true);
+    try {
+      if (onExitTest) {
+        await onExitTest();
+      } else {
+        await fetch('/api/tests/abandon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptId: attempt.id }),
+        });
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = '/tests';
+        }
+      }
+    } catch (err) {
+      console.error('Failed to exit test cleanly:', err);
+      window.location.href = '/tests';
+    } finally {
+      setIsExiting(false);
+      setIsExitModalOpen(false);
+    }
+  }, [onExitTest, attempt.id]);
 
   // Autosave helper
   const triggerAutoSave = useCallback(
@@ -392,13 +461,26 @@ export function QuizEngine({
             Palette
           </Button>
 
+          {/* Exit Test Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExitModalOpen(true)}
+            className="text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold flex items-center gap-1.5 text-xs h-9"
+            title="Exit examination (progress will be reset)"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Exit Test</span>
+          </Button>
+
           {/* Submit Test Button */}
           <Button
             type="button"
             variant="default"
             size="sm"
             onClick={() => setIsSubmitModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 text-xs h-9"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Submit Test</span>
@@ -476,6 +558,17 @@ export function QuizEngine({
         markedCount={markedCount}
         unansweredCount={unansweredCount}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Exit & Restart Confirmation Modal */}
+      <QuizExitModal
+        isOpen={isExitModalOpen}
+        onClose={() => setIsExitModalOpen(false)}
+        onConfirmExit={handleConfirmExit}
+        isExiting={isExiting}
+        testTitle={testTitle || attempt.test?.title || 'Examination Session'}
+        totalQuestions={totalQuestions}
+        answeredCount={answeredCount}
       />
     </div>
   );

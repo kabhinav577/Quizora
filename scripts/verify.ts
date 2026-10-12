@@ -22,10 +22,17 @@
 
 import fs from 'fs';
 import path from 'path';
-import { QuestionFormSchema } from '../src/schemas/question';
-import { validateImportData, normalizeDifficulty, RawImportRow } from '../src/services/imports';
+import { QuestionFormSchema, BulkImportRowSchema } from '../src/schemas/question';
+import { validateImportData, normalizeDifficulty, RawImportRow, parseImportFile } from '../src/services/imports';
 import { calculateAttemptScore } from '../src/lib/quiz/scoring';
 import { computeScorecardAnalytics } from '../src/lib/quiz/analytics';
+import {
+  normalizeLanguage,
+  getMonacoLanguage,
+  getLanguageDisplayName,
+  SUPPORTED_LANGUAGES,
+} from '../src/lib/code/languages';
+import { abandonAttempt, localAttempts } from '../src/services/attempts';
 
 // Global test counters
 let totalTests = 0;
@@ -358,12 +365,325 @@ function verifyQuizScoringAndAnalytics(): void {
 }
 
 /**
- * MAIN SUITE ORCHESTRATOR: runAllVerificationTests()
+ * FUNCTION 6: verifyV2CodeQuestionsAndImports()
+ * 
+ * Verifies all 24 required test scenarios for Quizora V2 Code Questions:
+ * - Normal text questions (backward compatibility)
+ * - {{CODE}} placement: beginning, middle, end, text+code+text
+ * - Supported languages: JS, TS, Python, Java, C, C++, C#, PHP, SQL, HTML, CSS, XML, JSON, Bash, Go, Rust, Plaintext
+ * - Raw indentation, newlines, blank lines, tabs, comments preservation
+ * - Validation rules: missing placeholder, missing language, missing code, duplicate placeholders
+ * - Centralized language mapping & Monaco mapping
+ * - CSV import of V2 25-column multiline template & legacy 23-column compatibility
+ */
+async function verifyV2CodeQuestionsAndImports(): Promise<void> {
+  console.log('💻 6. V2 Code Questions & CSV Bulk Import Engine');
+
+  const validExamId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+  const validSubjectId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+
+  const baseOptions: [any, any, any, any] = [
+    { text: 'Option A', image_path: null },
+    { text: 'Option B', image_path: null },
+    { text: 'Option C', image_path: null },
+    { text: 'Option D', image_path: null },
+  ];
+
+  // 1. Normal text question (no code fields)
+  const normalQ = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Which layer of the OSI model routes packets?',
+    options: baseOptions,
+    correct_option: 2,
+    code_language: null,
+    code_content: null,
+  });
+  assert(normalQ.success, 'Normal text question without code fields passes schema');
+
+  // 2. Code at beginning
+  const codeAtBeginning = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: '{{CODE}}\nWhat is the output?',
+    code_language: 'javascript',
+    code_content: 'console.log("hello");',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(codeAtBeginning.success, 'Code at beginning of question_text passes schema');
+
+  // 3. Text before code
+  const textBeforeCode = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Consider the following snippet:\n\n{{CODE}}',
+    code_language: 'python',
+    code_content: 'def add(a, b):\n    return a + b',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(textBeforeCode.success, 'Text before code passes schema');
+
+  // 4. Code followed by text
+  const codeFollowedByText = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: '{{CODE}}\n\nSelect the correct behavior.',
+    code_language: 'java',
+    code_content: 'public class Main { public static void main(String[] args) {} }',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(codeFollowedByText.success, 'Code followed by text passes schema');
+
+  // 5. Text + code + text
+  const textCodeText = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Consider the program:\n\n{{CODE}}\n\nWhat is the result?',
+    code_language: 'cpp',
+    code_content: 'class A { int x; };',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(textCodeText.success, 'Text + code + text passes schema');
+
+  // 6-12. Multi-language checks
+  const testLanguages = [
+    'javascript', 'typescript', 'python', 'java', 'c', 'cpp',
+    'csharp', 'php', 'sql', 'html', 'css', 'xml', 'json', 'bash', 'go', 'rust', 'plaintext'
+  ];
+  let allLangsSupported = true;
+  for (const lang of testLanguages) {
+    const q = QuestionFormSchema.safeParse({
+      exam_id: validExamId,
+      subject_id: validSubjectId,
+      question_text: `Review this ${lang} snippet:\n\n{{CODE}}`,
+      code_language: lang,
+      code_content: '// Code here',
+      options: baseOptions,
+      correct_option: 1,
+    });
+    if (!q.success) {
+      allLangsSupported = false;
+      break;
+    }
+  }
+  assert(allLangsSupported, 'All 17 supported languages pass schema validation');
+
+  // 13-17. Indentation, blank lines, comments, and multiline preservation
+  const rawSampleCode = `class A {
+    int x;
+    int y;
+
+public:
+    // Constructor initializes members
+    A() : y(20), x(y) {}
+};`;
+
+  const indentedQ = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Check constructor:\n\n{{CODE}}\n\nWhich statement is true?',
+    code_language: 'cpp',
+    code_content: rawSampleCode,
+    options: baseOptions,
+    correct_option: 2,
+  });
+  assert(indentedQ.success, 'Multiline indented code with comments and blank lines passes schema');
+  if (indentedQ.success) {
+    assert(indentedQ.data.code_content === rawSampleCode, 'Raw code formatting and indentation preserved 100% identically');
+  }
+
+  // 18. Validation: {{CODE}} without code_content
+  const missingContent = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Snippet:\n\n{{CODE}}',
+    code_language: 'javascript',
+    code_content: '',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(!missingContent.success, 'Schema rejects {{CODE}} when code_content is empty');
+
+  // 19. Validation: {{CODE}} without code_language
+  const missingLanguage = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Snippet:\n\n{{CODE}}',
+    code_language: '',
+    code_content: 'console.log(1);',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(!missingLanguage.success, 'Schema rejects {{CODE}} when code_language is empty');
+
+  // 20. Validation: code_content present but {{CODE}} missing from question_text
+  const missingPlaceholder = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'What is the output of this code?',
+    code_language: 'javascript',
+    code_content: 'console.log(1);',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(!missingPlaceholder.success, 'Schema rejects code_content when {{CODE}} placeholder is missing');
+
+  // 21. Validation: multiple {{CODE}} placeholders
+  const multiplePlaceholders = QuestionFormSchema.safeParse({
+    exam_id: validExamId,
+    subject_id: validSubjectId,
+    question_text: 'Code 1:\n{{CODE}}\nCode 2:\n{{CODE}}',
+    code_language: 'javascript',
+    code_content: 'let a = 1;',
+    options: baseOptions,
+    correct_option: 1,
+  });
+  assert(!multiplePlaceholders.success, 'Schema rejects multiple {{CODE}} placeholders per question in V2');
+
+  // 22. Language normalization and Monaco mappings
+  assert(normalizeLanguage('C++') === 'cpp', 'normalizeLanguage maps C++ to cpp');
+  assert(normalizeLanguage('js') === 'javascript', 'normalizeLanguage maps js to javascript');
+  assert(normalizeLanguage('py') === 'python', 'normalizeLanguage maps py to python');
+  assert(getMonacoLanguage('bash') === 'shell', 'getMonacoLanguage maps bash to shell');
+  assert(getLanguageDisplayName('cpp') === 'C++', 'getLanguageDisplayName returns human-readable label');
+
+  // 23. CSV multiline import test with V2 sample
+  const sampleV2Path = path.join(process.cwd(), 'public/Quizora_Bulk_Import_Sample_v2.csv');
+  assert(fs.existsSync(sampleV2Path), 'Quizora_Bulk_Import_Sample_v2.csv exists in public directory');
+
+  const sampleCsvContent = fs.readFileSync(sampleV2Path, 'utf8');
+  const parseResult = await parseImportFile(Buffer.from(sampleCsvContent), 'Quizora_Bulk_Import_Sample_v2.csv');
+  assert(parseResult.rows.length === 16, `V2 sample CSV parsed exactly 16 rows (got ${parseResult.rows.length})`);
+
+  // Check multiline preservation and Web Development topic in parsed row 10 (JavaScript)
+  const jsRow = parseResult.rows[10];
+  assert(jsRow.code_language === 'javascript', 'Row 10 has code_language = javascript');
+  assert(jsRow.topic === 'Web Development', 'Row 10 topic is classified as Web Development');
+  assert(
+    typeof jsRow.code_content === 'string' && jsRow.code_content.includes('let x = 1;') && jsRow.code_content.includes('let x = 2;'),
+    'Row 10 multiline code_content preserved across line breaks'
+  );
+
+  // Check C++ row (Row 11)
+  const cppRow = parseResult.rows[11];
+  assert(cppRow.code_language === 'cpp', 'Row 11 has code_language = cpp');
+  assert(cppRow.topic === 'Object Oriented Programming', 'Row 11 topic is classified as Object Oriented Programming');
+  assert(
+    typeof cppRow.code_content === 'string' && cppRow.code_content.includes('A() : y(20), x(y) {}'),
+    'Row 11 C++ class constructor indentation preserved'
+  );
+
+  // Check XML and SQL rows
+  const xmlRow = parseResult.rows[12];
+  assert(xmlRow.code_language === 'xml', 'Row 12 has code_language = xml');
+  assert(xmlRow.topic === 'Web Development', 'Row 12 topic is classified as Web Development');
+
+  const sqlRow = parseResult.rows[13];
+  assert(sqlRow.code_language === 'sql', 'Row 13 has code_language = sql');
+  assert(sqlRow.topic === 'DBMS', 'Row 13 topic is classified as DBMS');
+
+  // Check HTML and CSS questions specifically for Bihar STET
+  const htmlRow = parseResult.rows[14];
+  assert(htmlRow.exam === 'Bihar STET', 'Row 14 is specifically for Bihar STET exam');
+  assert(htmlRow.code_language === 'html', 'Row 14 has code_language = html');
+  assert(htmlRow.topic === 'Web Development', 'Row 14 topic is classified as Web Development');
+
+  const cssRow = parseResult.rows[15];
+  assert(cssRow.exam === 'Bihar STET', 'Row 15 is specifically for Bihar STET exam');
+  assert(cssRow.code_language === 'css', 'Row 15 has code_language = css');
+  assert(cssRow.topic === 'Web Development', 'Row 15 topic is classified as Web Development');
+
+  // 24. Validate all 16 rows against Bulk Import validation engine
+  const report = await validateImportData(parseResult.rows);
+  assert(report.totalRows === 16, 'Report totalRows is 16');
+  assert(report.validCount === 16, `All 16 rows validated successfully (validCount = ${report.validCount})`);
+  assert(report.errorCount === 0, `No validation errors encountered for V2 sample CSV (errorCount = ${report.errorCount})`);
+
+  // 25. Existing 23-column compatibility test (normal questions without code columns)
+  const legacy23Row: RawImportRow = {
+    exam: 'Bihar TRE 4.0',
+    subject: 'Computer Science',
+    topic: 'Computer Networks',
+    question_text: 'What is the default port for HTTP?',
+    option_a: '21',
+    option_b: '80',
+    option_c: '443',
+    option_d: '8080',
+    correct_option: 'B',
+    explanation: 'Port 80 is the default port for HTTP.',
+    difficulty: 'Easy',
+    marks: 1.0,
+    negative_marks: 0.25,
+  };
+  const legacyReport = await validateImportData([legacy23Row]);
+  assert(legacyReport.validCount === 1, 'Legacy 23-column question without code fields validates cleanly');
+}
+
+/**
+ * FUNCTION 7: verifyTestExitAndRestartLifecycle()
  * 
  * WHAT IT DOES:
- * - Executes each subsystem verification sequentially.
- * - Captures any unexpected exceptions.
- * - Prints summary statistics and exits with code 0 on success or code 1 on failure.
+ * - Tests the student exit test behavior:
+ *   1. An in-progress attempt transitions to 'abandoned' when student exits.
+ *   2. Active attempt query excludes 'abandoned' attempts, ensuring the test restarts from Question 1.
+ *   3. Verifies non-destructive cleanup after test.
+ */
+async function verifyTestExitAndRestartLifecycle(): Promise<void> {
+  console.log('\n🚪 7. Test Exit, Abandonment & Restart Engine');
+
+  const testAttemptId = 'test-verify-attempt-' + Date.now();
+  const mockAttempt = {
+    id: testAttemptId,
+    user_id: 'test-user-verify',
+    test_id: 'test-1',
+    status: 'in_progress' as const,
+    started_at: new Date().toISOString(),
+    completed_at: null,
+    score: null,
+    total_questions: 5,
+    answered_questions: 1,
+    correct_answers: null,
+    wrong_answers: null,
+    skipped_questions: null,
+    time_spent_seconds: 30,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // 1. Register mock attempt in local store
+  localAttempts.push(mockAttempt);
+  assert(
+    localAttempts.some((a) => a.id === testAttemptId && a.status === 'in_progress'),
+    'Mock active test attempt registered with in_progress status'
+  );
+
+  // 2. Abandon attempt
+  const abandonResult = await abandonAttempt(testAttemptId);
+  assert(abandonResult === true, 'abandonAttempt executed successfully');
+
+  // 3. Confirm status transitioned to 'abandoned'
+  const updated = localAttempts.find((a) => a.id === testAttemptId);
+  assert(updated?.status === 'abandoned', "Attempt status successfully transitioned to 'abandoned'");
+
+  // 4. Confirm 'abandoned' attempts are excluded from active attempts (preventing resume, forcing restart)
+  const activeAttempt = localAttempts.find(
+    (a) => a.user_id === 'test-user-verify' && a.test_id === 'test-1' && a.status === 'in_progress'
+  );
+  assert(activeAttempt === undefined, 'Active query returns null for abandoned attempt, guaranteeing fresh test restart');
+
+  // Clean up
+  const idx = localAttempts.findIndex((a) => a.id === testAttemptId);
+  if (idx !== -1) {
+    localAttempts.splice(idx, 1);
+  }
+}
+
+/**
+ * MAIN SUITE ORCHESTRATOR: runAllVerificationTests()
  */
 async function runAllVerificationTests(): Promise<void> {
   console.log('================================================================');
@@ -375,6 +695,8 @@ async function runAllVerificationTests(): Promise<void> {
   verifyQuestionSchemas();
   await verifyBulkImportEngine();
   verifyQuizScoringAndAnalytics();
+  await verifyV2CodeQuestionsAndImports();
+  await verifyTestExitAndRestartLifecycle();
 
   console.log('\n================================================================');
   console.log(`VERIFICATION COMPLETE: ${passedTests}/${totalTests} TESTS PASSED`);

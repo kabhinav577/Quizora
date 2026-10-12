@@ -19,6 +19,7 @@ import {
   Database,
   Loader2,
   X,
+  Code2,
 } from 'lucide-react';
 import { Question } from '@/types/database';
 import { Button } from '@/components/ui/button';
@@ -481,6 +482,13 @@ export function QuestionBankTable({
                           <Badge variant="default" className="text-[10px] gap-1">
                             <ImageIcon className="h-3 w-3" />
                             Option Images
+                          </Badge>
+                        )}
+
+                        {q.code_language && (
+                          <Badge variant="outline" className="text-[10px] gap-1 font-mono text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800">
+                            <Code2 className="h-3 w-3" />
+                            {q.code_language}
                           </Badge>
                         )}
 

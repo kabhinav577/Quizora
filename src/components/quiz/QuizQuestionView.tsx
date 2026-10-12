@@ -5,6 +5,7 @@ import { QuestionSnapshot } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ImageLightbox } from '@/components/media/ImageLightbox';
+import { QuizoraQuestionContent } from '@/components/code/QuizoraQuestionContent';
 import {
   Bookmark,
   BookmarkCheck,
@@ -61,14 +62,17 @@ export function QuizQuestionView({
           <span className="text-xs text-slate-500 dark:text-slate-400">
             of {totalQuestions}
           </span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/80 dark:text-indigo-300 dark:border-indigo-800">
+            Single Choice
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-300">
+          <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800">
             +{marks} mark{marks !== 1 ? 's' : ''}
           </Badge>
           {negativeMarks > 0 && (
-            <Badge variant="outline" className="text-rose-700 dark:text-rose-400 border-rose-300">
+            <Badge variant="outline" className="text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800">
               -{negativeMarks}
             </Badge>
           )}
@@ -79,9 +83,12 @@ export function QuizQuestionView({
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         {/* Question Text */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <p className="text-base sm:text-lg text-slate-900 dark:text-slate-100 font-medium leading-relaxed whitespace-pre-wrap">
-            {snapshot.question_text}
-          </p>
+          <QuizoraQuestionContent
+            questionText={snapshot.question_text}
+            codeLanguage={snapshot.code_language}
+            codeContent={snapshot.code_content}
+            textClassName="text-base sm:text-lg text-slate-900 dark:text-slate-100 font-medium leading-relaxed"
+          />
 
           {/* Question Diagram / Image */}
           {snapshot.question_image_path && (

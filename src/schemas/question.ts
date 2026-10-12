@@ -50,6 +50,8 @@ export const QuestionFormSchema = z
     question_type: z.literal('single_select').optional().default('single_select'),
     question_text: z.string().trim().min(3, { message: 'Question text must be at least 3 characters.' }),
     question_image_path: z.string().trim().nullable().optional(),
+    code_language: z.string().trim().nullable().optional(),
+    code_content: z.string().nullable().optional(),
     options: QuestionOptionsSchema,
     correct_option: z.coerce
       .number()
@@ -66,9 +68,15 @@ export const QuestionFormSchema = z
     source_year: z.coerce.number().int().min(1950).max(2100).nullable().optional(),
     status: z.enum(['draft', 'published', 'archived']).optional().default('draft'),
   })
-  .refine((data) => data.correct_option <= data.options.length, {
-    message: 'Correct option cannot exceed the number of available options.',
-    path: ['correct_option'],
+  .superRefine((data, ctx) => {
+    if (data.correct_option > data.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Correct option cannot exceed the number of available options.',
+        path: ['correct_option'],
+      });
+    }
+    validateCodeQuestionRules(data, ctx);
   });
 
 export type QuestionFormInput = z.input<typeof QuestionFormSchema>;
@@ -79,6 +87,72 @@ const coerceText = z.preprocess((val) => {
   const s = String(val).trim();
   return s.length > 0 ? s : null;
 }, z.string().nullable().optional());
+
+const coerceCodeContent = z.preprocess((val) => {
+  if (val === null || val === undefined) return null;
+  const s = String(val);
+  return s.trim().length > 0 ? s : null;
+}, z.string().nullable().optional());
+
+function validateCodeQuestionRules(
+  data: { question_text?: string; code_language?: string | null; code_content?: string | null },
+  ctx: z.RefinementCtx
+) {
+  const text = data.question_text || '';
+  const placeholderCount = (text.match(/\{\{CODE\}\}/g) || []).length;
+  if (placeholderCount > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Only one {{CODE}} placeholder is supported per question in V2.',
+      path: ['question_text'],
+    });
+  }
+
+  const hasCodeContent = Boolean(data.code_content && data.code_content.trim().length > 0);
+  const hasCodeLanguage = Boolean(data.code_language && data.code_language.trim().length > 0);
+
+  if (placeholderCount === 1) {
+    if (!hasCodeLanguage) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'code_language is required when {{CODE}} placeholder is used.',
+        path: ['code_language'],
+      });
+    }
+    if (!hasCodeContent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'code_content is required when {{CODE}} placeholder is used.',
+        path: ['code_content'],
+      });
+    }
+  }
+
+  if (hasCodeContent) {
+    if (placeholderCount === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Code content exists but {{CODE}} placeholder is missing from question_text.',
+        path: ['question_text'],
+      });
+    }
+    if (!hasCodeLanguage) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'code_content is present but code_language is empty.',
+        path: ['code_language'],
+      });
+    }
+  }
+
+  if (hasCodeLanguage && !hasCodeContent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'code_language is present but code_content is empty.',
+      path: ['code_content'],
+    });
+  }
+}
 
 const coerceRequiredText = (fieldName: string) =>
   z.preprocess((val) => {
@@ -145,6 +219,8 @@ export const BulkImportRowSchema = z
   .object({
     question_text: coerceRequiredText('Question text'),
     question_image: coerceText,
+    code_language: coerceText,
+    code_content: coerceCodeContent,
     option_a: coerceText,
     option_a_image: coerceText,
     option_b: coerceText,
@@ -168,6 +244,9 @@ export const BulkImportRowSchema = z
     source_year: coerceOptionalYear(),
   })
   .superRefine((data, ctx) => {
+    // Validate Code Question Rules
+    validateCodeQuestionRules(data, ctx);
+
     // Validate Option A (required)
     if (!data.option_a && !data.option_a_image) {
       ctx.addIssue({

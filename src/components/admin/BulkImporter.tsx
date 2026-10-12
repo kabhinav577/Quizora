@@ -28,11 +28,13 @@ import { ValidationReport } from '@/services/imports';
 export function BulkImporter() {
   const [file, setFile] = React.useState<File | null>(null);
   const [isParsing, setIsParsing] = React.useState(false);
+  const [parsingStage, setParsingStage] = React.useState<string>('Parsing file & validating taxonomy...');
   const [isCommitting, setIsCommitting] = React.useState(false);
   const [report, setReport] = React.useState<ValidationReport | null>(null);
   const [activeTab, setActiveTab] = React.useState<'errors' | 'duplicates' | 'valid' | 'taxonomy'>('errors');
   const [skipDuplicates, setSkipDuplicates] = React.useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
   const [completedSummary, setCompletedSummary] = React.useState<{
     imported: number;
     skipped: number;
@@ -40,6 +42,16 @@ export function BulkImporter() {
     subjectName?: string;
   } | null>(null);
   const [parseError, setParseError] = React.useState<string | null>(null);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  const handleCancelParsing = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsParsing(false);
+    setParseError('Validation was cancelled.');
+  };
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -47,6 +59,10 @@ export function BulkImporter() {
     setReport(null);
     setCompletedSummary(null);
     setIsParsing(true);
+    setParsingStage('Reading spreadsheet & unpacking contents...');
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const { rows, imagesMap, error } = await parseImportFile(selectedFile, selectedFile.name);
@@ -56,9 +72,37 @@ export function BulkImporter() {
         return;
       }
 
+      setParsingStage(`Validating ${rows.length} rows against Exam & Topic taxonomy...`);
+
       const imageFileNames = Array.from(imagesMap.keys());
       const plainRows = rows.map((r) => ({ ...r }));
-      const validationReport = await validateImportAction(plainRows, imageFileNames);
+
+      let validationReport: ValidationReport;
+
+      // Primary: High-speed direct API route with timeout protection
+      try {
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const res = await fetch('/api/admin/imports/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: plainRows, imageFileNames }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Server returned status ${res.status}`);
+        }
+        validationReport = await res.json();
+      } catch (apiErr: unknown) {
+        if (controller.signal.aborted) {
+          throw new Error('Validation request timed out or was cancelled. Please try again.');
+        }
+        // Fallback to Server Action if API route is unavailable
+        validationReport = await validateImportAction(plainRows, imageFileNames);
+      }
+
       setReport(validationReport);
       if (validationReport.errorCount > 0) {
         setActiveTab('errors');
@@ -71,6 +115,7 @@ export function BulkImporter() {
       setParseError(err instanceof Error ? err.message : 'Failed to parse file');
     } finally {
       setIsParsing(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -85,7 +130,25 @@ export function BulkImporter() {
           options: it.parsedInput.options.map((opt) => ({ ...opt })),
         },
       }));
-      const res = await commitImportAction(plainItems, skipDuplicates);
+
+      let res: { importedCount: number; skippedCount: number };
+
+      // Primary: API route with fallback to Server Action
+      try {
+        const apiRes = await fetch('/api/admin/imports/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: plainItems, skipDuplicates }),
+        });
+        if (!apiRes.ok) {
+          const errData = await apiRes.json().catch(() => ({}));
+          throw new Error(errData.error || `Server returned status ${apiRes.status}`);
+        }
+        res = await apiRes.json();
+      } catch {
+        res = await commitImportAction(plainItems, skipDuplicates);
+      }
+
       const examName = report.examsDetected.map((e) => e.name).join(', ') || 'General Exam';
       const subjectName = report.subjectsDetected.map((s) => s.name).join(', ') || 'General Subject';
       setCompletedSummary({
@@ -108,7 +171,45 @@ export function BulkImporter() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'quizora_sample_template.csv');
+    link.setAttribute('download', 'Quizora_Bulk_Import_Sample_v2.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateHeaders = [
+      'exam',
+      'subject',
+      'topic',
+      'question_text',
+      'question_image',
+      'code_language',
+      'code_content',
+      'option_a',
+      'option_a_image',
+      'option_b',
+      'option_b_image',
+      'option_c',
+      'option_c_image',
+      'option_d',
+      'option_d_image',
+      'option_e',
+      'option_e_image',
+      'correct_option',
+      'explanation',
+      'difficulty',
+      'default_time_seconds',
+      'marks',
+      'negative_marks',
+      'source_name',
+      'source_year',
+    ].join(',');
+    const blob = new Blob([templateHeaders + '\n'], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'Quizora_Bulk_Import_Template_v2.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -147,22 +248,34 @@ export function BulkImporter() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <UploadCloud className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            Bulk Question Importer
+            Bulk Question Importer (V2)
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Industry taxonomy: <span className="font-semibold text-slate-700 dark:text-slate-300">Exam → Subject → Topic → Question</span>. Pre-import validation prevents broken or duplicate data.
+            Industry taxonomy: <span className="font-semibold text-slate-700 dark:text-slate-300">Exam → Subject → Topic → Question</span>. Supports 25-column V2 format with code questions and multiline blocks.
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDownloadSample}
-          className="text-xs gap-1.5 shadow-xs border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-        >
-          <Download className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-          Download Sample Template (CSV)
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadTemplate}
+            className="text-xs gap-1.5 shadow-xs border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            Template (CSV)
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadSample}
+            className="text-xs gap-1.5 shadow-xs border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 cursor-pointer"
+          >
+            <Download className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            V2 Sample CSV
+          </Button>
+        </div>
       </div>
 
       {/* Import Workflow Stepper */}
@@ -216,7 +329,25 @@ export function BulkImporter() {
 
       {/* Step 1 & 2: Upload CSV / Parsing State */}
       {!report && !completedSummary && (
-        <div className="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 md:p-12 text-center hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-xs">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!isParsing) setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            if (!isParsing && e.dataTransfer.files && e.dataTransfer.files[0]) {
+              handleFileSelect(e.dataTransfer.files[0]);
+            }
+          }}
+          className={`rounded-2xl border-2 border-dashed transition-all p-8 md:p-12 text-center shadow-xs ${
+            isDragging
+              ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30'
+              : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-500'
+          }`}
+        >
           {isParsing ? (
             <div className="py-8 space-y-4">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 animate-pulse">
@@ -225,9 +356,23 @@ export function BulkImporter() {
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Parsing CSV & Validating Taxonomy...
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                Validating Exam, Subject, Topic hierarchy, duplicate questions, and correct answer options.
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto font-medium">
+                {parsingStage}
               </p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs mx-auto">
+                Checking Exam, Subject, Topic hierarchy, duplicate questions, and correct answer options.
+              </p>
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelParsing}
+                  className="text-xs text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 border-slate-200 dark:border-slate-700"
+                >
+                  Cancel Validation
+                </Button>
+              </div>
             </div>
           ) : (
             <>
@@ -254,7 +399,9 @@ export function BulkImporter() {
                     disabled={isParsing}
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
-                        handleFileSelect(e.target.files[0]);
+                        const selected = e.target.files[0];
+                        e.target.value = '';
+                        handleFileSelect(selected);
                       }
                     }}
                     className="hidden"
