@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Edit,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { listTests, archiveTest, publishTest } from '@/services/tests';
 import { getExams } from '@/services/exams';
@@ -53,15 +54,28 @@ export default async function AdminTestsPage({ searchParams }: PageProps) {
           </p>
         </div>
 
-        <Link href="/admin/tests/new">
-          <Button
-            size="sm"
-            className="text-xs gap-1.5 shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
-          >
-            <Plus className="h-4 w-4" />
-            Create New Test
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/tests/smart">
+            <Button
+              size="sm"
+              className="text-xs gap-1.5 shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+            >
+              <Sparkles className="h-4 w-4" />
+              Smart Test Builder
+            </Button>
+          </Link>
+
+          <Link href="/admin/tests/new">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 border-slate-200 dark:border-slate-700 font-medium"
+            >
+              <Plus className="h-4 w-4" />
+              Manual Builder
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter Bar */}

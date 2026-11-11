@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Save,
@@ -19,6 +20,7 @@ import {
   List,
   FolderPlus,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { Exam, Subject, Topic, Question } from '@/types/database';
 import { TestWithQuestions } from '@/services/tests';
@@ -318,6 +320,20 @@ export function TestBuilder({
         </div>
 
         <div className="flex items-center gap-2">
+          {!initialData && (
+            <Link href="/admin/tests/smart">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1.5 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
+              >
+                <Sparkles className="h-4 w-4 text-indigo-600" />
+                Smart Test Builder
+              </Button>
+            </Link>
+          )}
+
           <Button
             type="button"
             variant="outline"
