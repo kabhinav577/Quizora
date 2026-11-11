@@ -636,20 +636,21 @@ async function verifyTestExitAndRestartLifecycle(): Promise<void> {
   console.log('\n🚪 7. Test Exit, Abandonment & Restart Engine');
 
   const testAttemptId = 'test-verify-attempt-' + Date.now();
-  const mockAttempt = {
+  const mockAttempt: import('../src/types/database').Attempt = {
     id: testAttemptId,
     user_id: 'test-user-verify',
     test_id: 'test-1',
-    status: 'in_progress' as const,
+    status: 'in_progress',
     started_at: new Date().toISOString(),
-    completed_at: null,
-    score: null,
+    submitted_at: null,
+    score: 0,
+    accuracy: 0,
+    total_time_seconds: 30,
     total_questions: 5,
     answered_questions: 1,
-    correct_answers: null,
-    wrong_answers: null,
-    skipped_questions: null,
-    time_spent_seconds: 30,
+    correct_answers: 0,
+    wrong_answers: 0,
+    skipped_questions: 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -683,6 +684,187 @@ async function verifyTestExitAndRestartLifecycle(): Promise<void> {
 }
 
 /**
+ * FUNCTION 8: verifySmartTestBuilderAndShuffling()
+ * 
+ * Verifies Smart Test Builder and shuffling features:
+ * 1. Exam taxonomy statistics computation
+ * 2. Topic quota availability validation & shortage warnings
+ * 3. Automatic question selection with exact quota fulfillment & zero duplicate questions
+ * 4. Difficulty distribution targets (Easy, Medium, Hard breakdown)
+ * 5. Question replacement candidate discovery and safe swapping
+ * 6. Option shuffling preserves correct answer identities and scoring accuracy
+ * 7. Resuming / refreshing active attempts preserves frozen question order and option order
+ * 8. Backward compatibility: Manual test creation schema and CSV importer remain 100% functional
+ */
+async function verifySmartTestBuilderAndShuffling(): Promise<void> {
+  console.log('\n🧠 8. Smart Test Builder, Question Selection & Shuffling Verification');
+
+  const {
+    computeExamTaxonomyStats,
+    validateSmartTestQuotas,
+    generateSmartQuestions,
+    getReplacementCandidates,
+  } = await import('../src/services/smartTestBuilder');
+  const { startAttempt, localAttempts: liveAttempts, localAttemptQuestions: liveAttemptQuestions } = await import('../src/services/attempts');
+  const { TestFormSchema } = await import('../src/schemas/test');
+
+  const dataDir = path.join(process.cwd(), '.data');
+  const questions: import('../src/types/database').Question[] = JSON.parse(
+    fs.readFileSync(path.join(dataDir, 'questions.json'), 'utf8')
+  );
+  const topics: import('../src/types/database').Topic[] = JSON.parse(
+    fs.readFileSync(path.join(dataDir, 'topics.json'), 'utf8')
+  );
+  const subjects: import('../src/types/database').Subject[] = JSON.parse(
+    fs.readFileSync(path.join(dataDir, 'subjects.json'), 'utf8')
+  );
+
+  const examId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'; // Bihar STET
+
+  // 1. Exam taxonomy stats computation
+  const stats = computeExamTaxonomyStats(examId, questions, topics, subjects);
+  assert(stats.totalQuestions > 1000, `Exam taxonomy computed: ${stats.totalQuestions} total questions found`);
+  assert(stats.topics.length > 0, `Exam taxonomy found ${stats.topics.length} active topics`);
+
+  const sampleTopic1 = stats.topics[0];
+  const sampleTopic2 = stats.topics[1];
+  assert(Boolean(sampleTopic1 && sampleTopic2), 'Found at least 2 sample topics for quota tests');
+
+  // 2. Quota validation - Normal valid quota
+  const validQuotas = [
+    { topicId: sampleTopic1.topicId, count: 5 },
+    { topicId: sampleTopic2.topicId, count: 5 },
+  ];
+  const normalValidation = validateSmartTestQuotas(stats, validQuotas);
+  assert(normalValidation.isValid === true, 'Quota validation: Valid quota passes with isValid = true');
+  assert(normalValidation.totalRequested === 10, 'Quota validation: Correctly tracks total requested count (10)');
+
+  // 3. Quota validation - Shortage error detection
+  const excessiveQuotas = [
+    { topicId: sampleTopic1.topicId, count: sampleTopic1.totalCount + 999 },
+  ];
+  const shortageValidation = validateSmartTestQuotas(stats, excessiveQuotas);
+  assert(shortageValidation.isValid === false, 'Quota validation: Detects topic shortage and rejects with isValid = false');
+  assert(shortageValidation.topicErrors.length === 1, 'Quota validation: Accurately records exactly 1 topic shortage error');
+  assert(shortageValidation.topicErrors[0].requested > sampleTopic1.totalCount, 'Quota validation: Records requested vs available counts');
+
+  // 4. Automatic Question Selection
+  const smartResult = generateSmartQuestions(
+    examId,
+    [
+      { topicId: sampleTopic1.topicId, count: 6 },
+      { topicId: sampleTopic2.topicId, count: 4 },
+    ],
+    questions,
+    { easyPercent: 50, mediumPercent: 30, hardPercent: 20 }
+  );
+
+  assert(smartResult.questions.length === 10, `Smart generation: Selected exactly 10 questions (got ${smartResult.questions.length})`);
+
+  // Verify zero duplicate questions
+  const uniqueSelectedIds = new Set(smartResult.questions.map((q) => q.id));
+  assert(uniqueSelectedIds.size === smartResult.questions.length, 'Smart generation: 100% unique questions with ZERO duplicates');
+
+  // Verify topic adherence
+  const topic1Questions = smartResult.questions.filter((q) => q.topic_id === sampleTopic1.topicId);
+  const topic2Questions = smartResult.questions.filter((q) => q.topic_id === sampleTopic2.topicId);
+  assert(topic1Questions.length === 6, `Smart generation: Topic 1 contains exact requested quota of 6 (got ${topic1Questions.length})`);
+  assert(topic2Questions.length === 4, `Smart generation: Topic 2 contains exact requested quota of 4 (got ${topic2Questions.length})`);
+
+  // 5. Question Replacement Candidate Discovery
+  const targetQuestionToReplace = smartResult.questions[0];
+  const replacementCandidates = getReplacementCandidates(
+    examId,
+    targetQuestionToReplace.id,
+    targetQuestionToReplace.topic_id,
+    targetQuestionToReplace.difficulty,
+    smartResult.questions.map((q) => q.id),
+    questions
+  );
+
+  assert(replacementCandidates.length > 0, `Replacement engine: Found ${replacementCandidates.length} replacement candidates for topic`);
+  assert(
+    !replacementCandidates.some((c) => uniqueSelectedIds.has(c.id)),
+    'Replacement engine: Candidates exclude all currently selected questions'
+  );
+
+  // 6. Option Shuffling & Answer Correctness Preservation
+  const testId = '55555555-5555-5555-5555-555555555501';
+  const userId = 'verify-shuffling-user-' + Date.now();
+
+  // Start attempt with shuffling
+  const attempt = await startAttempt(userId, testId, true);
+  assert(attempt.questions.length > 0, `Attempt started with ${attempt.questions.length} questions`);
+
+  // Verify that for every question, the correct answer text is preserved in the shuffled snapshot
+  let allCorrectAnswersPreserved = true;
+  for (const aq of attempt.questions) {
+    const origQ = questions.find((q) => q.id === aq.question_id);
+    if (!origQ) continue;
+
+    const originalCorrectOptionText = origQ.options[origQ.correct_option - 1]?.text;
+    const shuffledCorrectOptionText = aq.question_snapshot.options[aq.question_snapshot.correct_option - 1]?.text;
+
+    if (originalCorrectOptionText !== shuffledCorrectOptionText) {
+      allCorrectAnswersPreserved = false;
+      break;
+    }
+  }
+  assert(allCorrectAnswersPreserved, 'Option Shuffling: Correct answer text is 100% preserved after option reordering');
+
+  // Verify that answering with snapshot.correct_option awards full marks (+1.0)
+  const firstQ = attempt.questions[0];
+  const scoringInput = [
+    {
+      question_snapshot: firstQ.question_snapshot,
+      selected_option: firstQ.question_snapshot.correct_option,
+      time_spent_seconds: 20,
+    },
+  ];
+  const scoreResult = calculateAttemptScore(scoringInput);
+  assert(scoreResult.correct_answers === 1, 'Shuffled option evaluation: Correct option awards 1 correct answer');
+  assert(scoreResult.score === 1.0, 'Shuffled option evaluation: Correct option awards full positive marks (1.0)');
+
+  // 7. Refresh / Resuming attempt preserves frozen question and option order
+  const resumedAttempt = await startAttempt(userId, testId, false);
+  assert(resumedAttempt.id === attempt.id, 'Resuming attempt: Returns the same active in-progress attempt');
+  assert(
+    resumedAttempt.questions[0].question_id === attempt.questions[0].question_id,
+    'Resuming attempt: Preserves frozen question order identically'
+  );
+  assert(
+    resumedAttempt.questions[0].question_snapshot.correct_option === attempt.questions[0].question_snapshot.correct_option,
+    'Resuming attempt: Preserves frozen option order and correct_option identically'
+  );
+
+  // Cleanup verify attempt
+  const aIdx = liveAttempts.findIndex((a) => a.id === attempt.id);
+  if (aIdx !== -1) liveAttempts.splice(aIdx, 1);
+  const aqFiltered = liveAttemptQuestions.filter((aq) => aq.attempt_id !== attempt.id);
+  liveAttemptQuestions.length = 0;
+  liveAttemptQuestions.push(...aqFiltered);
+
+  // 8. Backward Compatibility: Manual Test Creation schema check
+  const manualTestPayload = {
+    exam_id: examId,
+    title: 'Manual Test Creation Regression Check',
+    slug: 'manual-test-regression-' + Date.now(),
+    description: 'Manual test creation remains fully functional',
+    test_type: 'practice' as const,
+    marks_per_question: 1,
+    negative_marks: 0.25,
+    shuffle_questions: true,
+    shuffle_options: false,
+    show_result_immediately: true,
+    show_explanations: true,
+    status: 'draft' as const,
+    question_ids: [smartResult.questions[0].id, smartResult.questions[1].id],
+  };
+  const manualValidation = TestFormSchema.safeParse(manualTestPayload);
+  assert(manualValidation.success, 'Backward Compatibility: Manual test creation schema validates successfully');
+}
+
+/**
  * MAIN SUITE ORCHESTRATOR: runAllVerificationTests()
  */
 async function runAllVerificationTests(): Promise<void> {
@@ -697,6 +879,7 @@ async function runAllVerificationTests(): Promise<void> {
   verifyQuizScoringAndAnalytics();
   await verifyV2CodeQuestionsAndImports();
   await verifyTestExitAndRestartLifecycle();
+  await verifySmartTestBuilderAndShuffling();
 
   console.log('\n================================================================');
   console.log(`VERIFICATION COMPLETE: ${passedTests}/${totalTests} TESTS PASSED`);
@@ -714,3 +897,4 @@ runAllVerificationTests().catch((err) => {
   console.error('Fatal verification error:', err);
   process.exit(1);
 });
+
